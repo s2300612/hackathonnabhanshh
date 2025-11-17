@@ -1,16 +1,22 @@
-export function tintToRGBA(hex: string, alpha = 0.3) {
-  const m = hex.replace("#", "");
-  const r = parseInt(m.length === 3 ? m[0] + m[0] : m.slice(0, 2), 16);
-  const g = parseInt(m.length === 3 ? m[1] + m[1] : m.slice(2, 4), 16);
-  const b = parseInt(m.length === 3 ? m[2] + m[2] : m.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 export const TINT_SWATCHES = [
   "#22c55e",
   "#3b82f6",
   "#ef4444",
   "#f59e0b",
   "#a855f7",
-];
+  "#14b8a6",
+  "#eab308",
+] as const;
+
+export type Hex = (typeof TINT_SWATCHES)[number];
+
+export function hexToRgba(hex: string, alpha = 0.3) {
+  const h = hex.replace("#", "");
+  const normalized = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const bigint = parseInt(normalized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 

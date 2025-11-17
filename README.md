@@ -196,6 +196,7 @@ yarn format
 
 - **Camera shows black screen**: Close Expo Go, run `yarn start --reset-cache`, reopen.
 - **No photos saved**: On the phone, enable Photos/Media permission for Expo Go in system settings.
+- Android / Expo Go: album read may be restricted; app falls back to local list but can still save via write-only permission.
 
 ### Development Server Issues?
 ```bash

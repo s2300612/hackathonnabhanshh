@@ -3,12 +3,8 @@ import { Link, SplashScreen, Tabs } from 'expo-router';
 import React, { useCallback, useEffect } from 'react';
 
 import { Pressable, Text } from '@/components/ui';
-import {
-  Feed as FeedIcon,
-  Settings as SettingsIcon,
-  Style as StyleIcon,
-} from '@/components/ui/icons';
 import { useAuth } from '@/lib';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   const { status } = useAuth();
@@ -25,39 +21,53 @@ export default function TabLayout() {
 
   
   return (
-    <Tabs>
+    <Tabs initialRouteName="camera-advanced" screenOptions={{ headerShown: true }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Feed',
-          tabBarIcon: ({ color }) => <FeedIcon color={color} />,
-          headerRight: () => <CreateNewPostLink />,
-          tabBarButtonTestID: 'feed-tab',
+          href: null,
         }}
       />
       <Tabs.Screen
-        name="style"
+        name="album"
         options={{
-          title: 'Style',
-          headerShown: false,
-          tabBarIcon: ({ color }) => <StyleIcon color={color} />,
-          tabBarButtonTestID: 'style-tab',
+          title: 'Album',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="images-outline" color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="camera-advanced"
+        options={{
+          title: 'Camera+',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="camera-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="camera-settings"
         options={{
           title: 'Settings',
-          headerShown: false,
-          tabBarIcon: ({ color }) => <SettingsIcon color={color} />,
-          tabBarButtonTestID: 'settings-tab',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" color={color} size={size} />
+          ),
         }}
       />
-      <Tabs.Screen name="camera-advanced" options={{ title: 'Camera+' }} />
       <Tabs.Screen
-        name="process"
+        name="details"
+        options={{
+          title: 'Details',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="information-circle-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="photo"
         options={{ href: null }}
-      /> {/* hidden, navigated programmatically */}
+      /> {/* hidden photo details screen */}
     </Tabs>
   );
 }
