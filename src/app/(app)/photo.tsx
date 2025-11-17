@@ -1,8 +1,10 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { View, Text, Image, Pressable, Alert, StyleSheet } from "react-native";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
+
+import { observer } from "mobx-react-lite";
 
 import ViewShot from "react-native-view-shot";
 
@@ -12,31 +14,53 @@ import Slider from "@react-native-community/slider";
 
 import { requestMediaPermission, ALBUM } from "@/lib/camera-permissions";
 
+import { useStores } from "@/stores";
+
+import type { Look } from "@/stores/camera-store";
 
 
-type Look = "none" | "night" | "thermal" | "tint";
 
-
-
-export default function PhotoEditor() {
+function PhotoEditorImpl() {
 
   const { uri } = useLocalSearchParams<{ uri: string }>();
 
   const router = useRouter();
 
+  const { camera } = useStores();
 
 
-  const [look, setLook] = useState<Look>("none");
 
-  const [tint, setTint] = useState("#22c55e");
+  // Initialize from store, but allow local overrides for this editing session
 
-  const [night, setNight] = useState(0.28);
+  const [look, setLook] = useState<Look>(camera.look);
 
-  const [thermal, setThermal] = useState(0.28);
+  const [tint, setTint] = useState(camera.tint);
 
-  const [tintAlpha, setTintAlpha] = useState(0.35);
+  const [night, setNight] = useState(camera.night);
+
+  const [thermal, setThermal] = useState(camera.thermal);
+
+  const [tintAlpha, setTintAlpha] = useState(camera.tintAlpha);
 
   const [busy, setBusy] = useState(false);
+
+
+
+  // Sync local state when store changes (e.g., from Settings screen)
+
+  useEffect(() => {
+
+    setLook(camera.look);
+
+    setTint(camera.tint);
+
+    setNight(camera.night);
+
+    setThermal(camera.thermal);
+
+    setTintAlpha(camera.tintAlpha);
+
+  }, [camera.look, camera.tint, camera.night, camera.thermal, camera.tintAlpha]);
 
 
 
@@ -146,7 +170,13 @@ export default function PhotoEditor() {
 
             key={l}
 
-            onPress={() => setLook(l)}
+            onPress={() => {
+
+              setLook(l);
+
+              camera.setLook(l);
+
+            }}
 
             style={{
 
@@ -180,7 +210,25 @@ export default function PhotoEditor() {
 
           <Text style={{ marginTop: 12 }}>Night strength</Text>
 
-          <Slider value={night} onValueChange={setNight} minimumValue={0} maximumValue={0.8} step={0.02} />
+          <Slider
+
+            value={night}
+
+            onValueChange={(v) => {
+
+              setNight(v);
+
+              camera.setNight(v);
+
+            }}
+
+            minimumValue={0}
+
+            maximumValue={0.8}
+
+            step={0.02}
+
+          />
 
         </>
 
@@ -194,7 +242,25 @@ export default function PhotoEditor() {
 
           <Text style={{ marginTop: 12 }}>Thermal strength</Text>
 
-          <Slider value={thermal} onValueChange={setThermal} minimumValue={0} maximumValue={0.8} step={0.02} />
+          <Slider
+
+            value={thermal}
+
+            onValueChange={(v) => {
+
+              setThermal(v);
+
+              camera.setThermal(v);
+
+            }}
+
+            minimumValue={0}
+
+            maximumValue={0.8}
+
+            step={0.02}
+
+          />
 
         </>
 
@@ -216,7 +282,13 @@ export default function PhotoEditor() {
 
                 key={c}
 
-                onPress={() => setTint(c)}
+                onPress={() => {
+
+                  setTint(c);
+
+                  camera.setTint(c);
+
+                }}
 
                 style={{
 
@@ -240,7 +312,25 @@ export default function PhotoEditor() {
 
           <Text>Tint strength</Text>
 
-          <Slider value={tintAlpha} onValueChange={setTintAlpha} minimumValue={0} maximumValue={0.8} step={0.02} />
+          <Slider
+
+            value={tintAlpha}
+
+            onValueChange={(v) => {
+
+              setTintAlpha(v);
+
+              camera.setTintAlpha(v);
+
+            }}
+
+            minimumValue={0}
+
+            maximumValue={0.8}
+
+            step={0.02}
+
+          />
 
         </>
 
@@ -269,6 +359,10 @@ export default function PhotoEditor() {
   );
 
 }
+
+
+
+export default observer(PhotoEditorImpl);
 
 
 

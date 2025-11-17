@@ -5,6 +5,7 @@ import React, { useCallback, useEffect } from 'react';
 import { Pressable, Text } from '@/components/ui';
 import { useAuth } from '@/lib';
 import { Ionicons } from '@expo/vector-icons';
+import StoresProvider from '@/stores';
 
 export default function TabLayout() {
   const { status } = useAuth();
@@ -21,7 +22,8 @@ export default function TabLayout() {
 
   
   return (
-    <Tabs initialRouteName="camera-advanced" screenOptions={{ headerShown: true }}>
+    <StoresProvider>
+      <Tabs initialRouteName="camera-advanced" screenOptions={{ headerShown: true }}>
       <Tabs.Screen
         name="index"
         options={{
@@ -68,7 +70,8 @@ export default function TabLayout() {
         name="photo"
         options={{ href: null }}
       /> {/* hidden photo details screen */}
-    </Tabs>
+      </Tabs>
+    </StoresProvider>
   );
 }
 

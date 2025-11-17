@@ -1,68 +1,44 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Alert, ScrollView, Pressable, StyleSheet } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { observer } from "mobx-react-lite";
 import { Button } from "@/components/ui/button";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { TINT_SWATCHES, Hex, hexToRgba } from "@/lib/tint";
-import { STORAGE_CAMERA_PREFS } from "@/lib/camera-permissions";
+import { useStores } from "@/stores";
 
-type Look = "none" | "night" | "thermal" | "tint";
-
-export default function CameraAdvanced() {
+function CameraAdvancedImpl() {
   const [camPerm, requestCamPerm] = useCameraPermissions();
   const router = useRouter();
+  const { camera } = useStores();
 
   const [type, setType] = useState<"front" | "back">("back");
   const [flash, setFlash] = useState<"off" | "on" | "auto">("off");
-  const [look, setLook] = useState<Look>("none");
-  const [tint, setTint] = useState<Hex>("#22c55e" as Hex);
-  const [tintAlpha, setTintAlpha] = useState<number>(0.3);
-  const [nightAlpha, setNightAlpha] = useState<number>(0.35);
-  const [thermalAlpha, setThermalAlpha] = useState<number>(0.45);
 
   const camRef = useRef<CameraView | null>(null);
 
-  const hydratePrefs = useCallback(async () => {
-    const prefs = await AsyncStorage.getItem(STORAGE_CAMERA_PREFS);
-    if (prefs) {
-      const p = JSON.parse(prefs);
-      if (p.defaultLook) setLook(p.defaultLook);
-      if (p.defaultTint) setTint(p.defaultTint as Hex);
-      if (p.tintAlpha != null) setTintAlpha(p.tintAlpha);
-      if (p.nightAlpha != null) setNightAlpha(p.nightAlpha);
-      if (p.thermalAlpha != null) setThermalAlpha(p.thermalAlpha);
-    }
-  }, []);
-
   useEffect(() => {
-    (async () => {
-      await hydratePrefs();
-      if (!camPerm?.granted) await requestCamPerm();
-    })();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      hydratePrefs();
-    }, [hydratePrefs])
-  );
+    if (!camPerm?.granted) {
+      requestCamPerm();
+    }
+  }, [camPerm, requestCamPerm]);
 
   const cycleFlash = () => {
     setFlash((prev) => (prev === "off" ? "on" : prev === "on" ? "auto" : "off"));
   };
 
-  const takePhoto = useCallback(async () => {
+  const takePhoto = async () => {
     if (!camRef.current) return;
     try {
       const pic = await camRef.current.takePictureAsync({ quality: 0.8, skipProcessing: true });
       if (!pic?.uri) return;
+      camera.pushShot(pic.uri);
       router.push({ pathname: "/(app)/photo", params: { uri: pic.uri } });
-    } catch (e:any) {
+    } catch (e: any) {
       Alert.alert("Capture error", String(e?.message ?? e));
     }
-  }, [router]);
+  };
 
   if (!camPerm) {
     return (
@@ -90,21 +66,21 @@ export default function CameraAdvanced() {
           enableZoomGesture
           style={{ flex: 1 }}
         />
-        {look === "tint" && (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: hexToRgba(tint, tintAlpha) }]} />
+        {camera.look === "tint" && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: hexToRgba(camera.tint as Hex, camera.tintAlpha) }]} />
         )}
-        {look === "night" && (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: `rgba(0, 60, 0, ${nightAlpha})` }]} />
+        {camera.look === "night" && (
+          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: `rgba(0, 60, 0, ${camera.night})` }]} />
         )}
-        {look === "thermal" && (
+        {camera.look === "thermal" && (
           <LinearGradient
             pointerEvents="none"
-            colors={["rgba(0,0,0,0)", `rgba(255,0,0,${thermalAlpha})`, `rgba(255,255,0,${thermalAlpha})`]}
+            colors={["rgba(0,0,0,0)", `rgba(255,0,0,${camera.thermal})`, `rgba(255,255,0,${camera.thermal})`]}
             style={StyleSheet.absoluteFillObject}
           />
         )}
 
-        <View style={[StyleSheet.absoluteFillObject, { justifyContent: "space-between", padding: 16 }]}>
+        <View style={[StyleSheet.absoluteFillObject, { padding: 16 }]}>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Button
               label={type === "back" ? "Front" : "Back"}
@@ -120,56 +96,55 @@ export default function CameraAdvanced() {
               fullWidth={false}
             />
           </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {(["none", "night", "thermal", "tint"] as Look[]).map((l) => (
-              <Button
-                key={l}
-                label={l}
-                size="sm"
-                variant={look === l ? "default" : "outline"}
-                onPress={() => setLook(l)}
-                fullWidth={false}
-              />
-            ))}
-            {TINT_SWATCHES.map((c) => {
-              const selected = tint === c;
-              return (
-                <Pressable
-                  key={c}
-                  onPress={() => {
-                    setTint(c as Hex);
-                    setLook("tint");
-                  }}
-                  style={{
-                    padding: 6,
-                    borderRadius: 999,
-                    borderWidth: selected ? 3 : 1,
-                    borderColor: selected ? "#fff" : "#ccc",
-                  }}
-                >
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: c }} />
-                </Pressable>
-              );
-            })}
-          </ScrollView>
         </View>
       </View>
 
-      <View style={{ padding: 16, flexDirection: "row", justifyContent: "space-between", backgroundColor: "#fff" }}>
-        <Button label="Album" variant="outline" onPress={() => router.push("/(app)/album")} fullWidth={false} />
-        <Button label="Settings" variant="outline" onPress={() => router.push("/(app)/camera-settings")} fullWidth={false} />
-      </View>
+      <View style={{ padding: 16, backgroundColor: "#fff", gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, alignItems: "center" }}>
+          {(["none", "night", "thermal", "tint"] as const).map((l) => (
+            <Button
+              key={l}
+              label={l}
+              size="sm"
+              variant={camera.look === l ? "default" : "outline"}
+              onPress={() => camera.setLook(l)}
+              fullWidth={false}
+            />
+          ))}
+          {TINT_SWATCHES.map((c) => {
+            const selected = camera.tint === c;
+            return (
+              <Pressable
+                key={c}
+                onPress={() => {
+                  camera.setTint(c);
+                  camera.setLook("tint");
+                }}
+                style={{
+                  padding: 4,
+                  borderRadius: 999,
+                  borderWidth: selected ? 2 : 1,
+                  borderColor: selected ? "#000" : "#ccc",
+                }}
+              >
+                <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: c }} />
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
-      <View style={{ position:"absolute", bottom:18, left:0, right:0, alignItems:"center" }}>
-        <Pressable
-          onPress={takePhoto}
-          style={{ width:72, height:72, borderRadius:36, backgroundColor:"#fff", alignItems:"center", justifyContent:"center", elevation:4 }}
-        >
-          <View style={{ width:58, height:58, borderRadius:29, backgroundColor:"#111" }} />
-        </Pressable>
+        <View style={{ position: "relative", alignItems: "center", paddingVertical: 8 }}>
+          <Pressable
+            onPress={takePhoto}
+            style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", elevation: 4, borderWidth: 4, borderColor: "#000" }}
+          >
+            <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: "#111" }} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
 }
+
+export default observer(CameraAdvancedImpl);
 
