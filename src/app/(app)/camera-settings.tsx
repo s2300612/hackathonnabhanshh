@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Slider from "@react-native-community/slider";
 import { Button } from "@/components/ui/button";
 import { STORAGE_CAMERA_PREFS } from "@/lib/camera-permissions";
 import { TINT_SWATCHES } from "@/lib/tint";
+import { useAuth } from "@/lib/auth";
 
 type Look = "none" | "night" | "thermal" | "tint";
 type Prefs = { defaultLook: Look; defaultTint: string };
@@ -12,6 +13,7 @@ type Prefs = { defaultLook: Look; defaultTint: string };
 const DEFAULTS: Prefs = { defaultLook: "none", defaultTint: TINT_SWATCHES[0] };
 
 export default function CameraSettings() {
+  const { signOut, token } = useAuth();
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [tintAlpha, setTintAlpha] = useState(0.3);
@@ -118,6 +120,17 @@ export default function CameraSettings() {
       />
 
       <Button label={saving ? "Saving…" : "Save"} onPress={save} disabled={saving} />
+
+      <View style={{ marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: "#e5e7eb", gap: 16 }}>
+        <Text style={{ fontSize: 18, fontWeight: "700" }}>Account</Text>
+        <Text>Signed in: {token ? "Yes" : "No"}</Text>
+        <Pressable
+          onPress={signOut}
+          style={{ padding: 12, borderRadius: 10, backgroundColor: "#e53935", alignSelf: "flex-start" }}
+        >
+          <Text style={{ color: "white", fontWeight: "800" }}>Sign out</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }

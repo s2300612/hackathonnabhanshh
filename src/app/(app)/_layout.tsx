@@ -70,6 +70,18 @@ export default function TabLayout() {
         name="photo"
         options={{ href: null }}
       /> {/* hidden photo details screen */}
+      <Tabs.Screen
+        name="settings"
+        options={{ href: null }}
+      /> {/* hidden - Sign Out moved to camera-settings */}
+      <Tabs.Screen
+        name="style"
+        options={{ href: null }}
+      /> {/* hidden - accessed via Album buttons */}
+      <Tabs.Screen
+        name="process"
+        options={{ href: null }}
+      /> {/* hidden - accessed via Album buttons */}
       </Tabs>
     </StoresProvider>
   );
