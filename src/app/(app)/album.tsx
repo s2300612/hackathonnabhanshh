@@ -7,12 +7,17 @@ import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { useStores } from "@/stores";
 import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
+import { Ionicons } from "@expo/vector-icons";
 
 type Shot = { id: string; uri: string; picked?: boolean };
 
 function AlbumScreenImpl() {
   const router = useRouter();
-  const { camera, history } = useStores();
+  const { auth, camera, history } = useStores();
+
+  React.useEffect(() => {
+    if (!auth.signedIn) router.replace("/login");
+  }, [auth.signedIn, router]);
   const [items, setItems] = useState<Shot[]>([]);
   const [canRead, setCanRead] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -163,6 +168,25 @@ function AlbumScreenImpl() {
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Button label="Pick from Gallery" onPress={pickFromGallery} size="sm" />
             </View>
+            {camera.recent.length > 0 && (
+              <Pressable
+                onPress={async () => {
+                  Alert.alert("Clear local", "Remove all local images?", [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Clear",
+                      style: "destructive",
+                      onPress: async () => {
+                        await camera.clearLocal();
+                      },
+                    },
+                  ]);
+                }}
+                style={{ backgroundColor: "#ef4444", padding: 10, borderRadius: 8, alignSelf: "flex-start", marginTop: 8 }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "700" }}>Clear local</Text>
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -189,17 +213,46 @@ function AlbumScreenImpl() {
               </Text>
             ) : null
           }
-          renderItem={({ item }) => (
-            <Pressable 
-              onPress={() => openEditor(item)} 
-              style={{ width: "31%", aspectRatio: 1, borderRadius: 8, overflow: "hidden" }}
-            >
-              <Image
-                source={{ uri: item.uri }}
-                style={{ width: "100%", height: "100%", backgroundColor: "#ddd" }}
-              />
-            </Pressable>
-          )}
+          renderItem={({ item }) => {
+            const isLocal = camera.recent.some(r => r.uri === item.uri);
+            return (
+              <Pressable
+                onPress={() => openEditor(item)}
+                style={{ width: "31%", aspectRatio: 1, borderRadius: 8, overflow: "hidden" }}
+              >
+                <Image
+                  source={{ uri: String(item.uri) }}
+                  style={{ width: "100%", height: "100%", backgroundColor: "#ddd" }}
+                />
+                {isLocal && (
+                  <Pressable
+                    onLongPress={async () => {
+                      Alert.alert("Delete", "Remove this image?", [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Delete",
+                          style: "destructive",
+                          onPress: async () => {
+                            await camera.removeLocalByUri(item.uri);
+                          },
+                        },
+                      ]);
+                    }}
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      backgroundColor: "rgba(0,0,0,0.6)",
+                      padding: 6,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#fff" />
+                  </Pressable>
+                )}
+              </Pressable>
+            );
+          }}
           ListEmptyComponent={
             <Text style={{ marginTop: 12, opacity: 0.75, padding: 16 }}>
               {loading ? "Loading…" : "No photos yet. Use Pick from Gallery or capture photos in Camera+."}

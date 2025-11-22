@@ -1,10 +1,17 @@
 import React from "react";
 import { View, Text, Linking, ScrollView } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import Constants from "expo-constants";
+import { useStores } from "@/stores";
 
 export default function DetailsImpl() {
+  const router = useRouter();
+  const { auth } = useStores();
   const v = Constants?.expoConfig?.version ?? "dev";
+
+  React.useEffect(() => {
+    if (!auth.signedIn) router.replace("/login");
+  }, [auth.signedIn, router]);
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
       <Stack.Screen options={{ title: "Details" }} />

@@ -1,84 +1,100 @@
 import React, { useState } from "react";
-import { Link, useRouter } from "expo-router";
-import { KeyboardAvoidingView, Platform } from "react-native";
-import { View, Text } from "@/components/ui";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, Link } from "expo-router";
+import { observer } from "mobx-react-lite";
+import { useAuth } from "@/stores/auth-store";
 
-export default function LoginScreen() {
+function LoginImpl() {
+  const auth = useAuth();
   const router = useRouter();
-  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function onLogin() {
-    setError(null);
-    // super-basic validation (keep it local; auth flow already exists in app)
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter your email and password.");
-      return;
-    }
+  const isValid = auth.isValidEmail(email) && password.length >= 6 && !auth.loading;
+
+  const handleLogin = async () => {
     try {
-      setLoading(true);
-      // call your existing sign-in flow
-      await signIn({ access: "dummy-access", refresh: "dummy-refresh" });
+      await auth.login(email, password);
       router.replace("/(app)/camera-advanced");
-    } catch (e: any) {
-      setError("Sign in failed. Please try again.");
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      // Error is set in authStore.error
     }
-  }
+  };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1"
-    >
-      <View className="flex-1 bg-white px-5 dark:bg-neutral-950">
-        <View className="mt-16">
-          <Text className="text-3xl font-bold text-black dark:text-white">
-            Sign in
-          </Text>
-          <Text className="mt-2 text-neutral-600 dark:text-neutral-300">
-            Access your camera tools and album.
-          </Text>
-        </View>
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingTop: 32 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={{ fontSize: 28, fontWeight: "700", marginBottom: 8 }}>Sign in</Text>
+          <Text style={{ color: "#666", marginBottom: 24 }}>Access your camera tools and album.</Text>
 
-        <View className="mt-8 gap-4">
-          <Input
+          <TextInput
             placeholder="Email"
-            keyboardType="email-address"
             autoCapitalize="none"
+            keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ddd",
+              borderRadius: 8,
+              padding: 12,
+              marginBottom: 12,
+              backgroundColor: "#fff",
+            }}
           />
-          <Input
+
+          <TextInput
             placeholder="Password"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ddd",
+              borderRadius: 8,
+              padding: 12,
+              marginBottom: 12,
+              backgroundColor: "#fff",
+            }}
           />
-          {error ? (
-            <Text className="text-red-600">{error}</Text>
-          ) : null}
-          <Button label="Login" onPress={onLogin} loading={loading} />
-        </View>
 
-        <View className="mt-6 flex-row">
-          <Text className="text-neutral-600 dark:text-neutral-300">
-            Don't have an account?{" "}
-          </Text>
-          <Link href="/register">
-            <Text className="font-semibold text-blue-600 dark:text-blue-400">
-              Register
+          {auth.error && (
+            <Text style={{ color: "#ef4444", marginBottom: 12, fontSize: 14 }}>{auth.error}</Text>
+          )}
+
+          <Pressable
+            onPress={handleLogin}
+            disabled={!isValid}
+            style={{
+              backgroundColor: isValid ? "#222" : "#ccc",
+              padding: 14,
+              borderRadius: 8,
+              marginBottom: 16,
+              opacity: isValid ? 1 : 0.6,
+            }}
+          >
+            <Text style={{ color: "#fff", textAlign: "center", fontWeight: "700" }}>
+              {auth.loading ? "Signing in..." : "Login"}
             </Text>
-          </Link>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+          </Pressable>
+
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>
+            <Text>Don't have an account? </Text>
+            <Link href="/register" asChild>
+              <Pressable>
+                <Text style={{ color: "#2563eb", fontWeight: "600" }}>Register</Text>
+              </Pressable>
+            </Link>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+export default observer(LoginImpl);

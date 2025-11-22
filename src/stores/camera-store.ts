@@ -94,5 +94,15 @@ export class CameraStore {
 
   clearShots() { this.recent = []; }
 
+  removeLocalByUri = async (uri: string) => {
+    this.recent = this.recent.filter(it => it.uri !== uri);
+    // Persistence is handled automatically by makePersistable
+  };
+
+  clearLocal = async () => {
+    this.recent = [];
+    // Persistence is handled automatically by makePersistable
+  };
+
 }
 

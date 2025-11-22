@@ -10,7 +10,11 @@ import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
 
 function HistoryScreenImpl() {
   const router = useRouter();
-  const { history, camera } = useStores();
+  const { auth, history, camera } = useStores();
+
+  React.useEffect(() => {
+    if (!auth.signedIn) router.replace("/login");
+  }, [auth.signedIn, router]);
   const data = useMemo(() => history?.filteredSortedEdits ?? [], [history?.filteredSortedEdits]);
 
   const clear = () =>
@@ -74,32 +78,46 @@ function HistoryScreenImpl() {
       <Stack.Screen options={{ title: "History" }} />
       
       {/* Filter Chips */}
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          <Pressable
-            onPress={() => history?.setFilter?.("all")}
-            style={[styles.filterChip, history?.filter === "all" && styles.filterChipActive]}
-          >
-            <Text style={[styles.filterText, history?.filter === "all" && styles.filterTextActive]}>All</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => history?.setFilter?.("drafts")}
-            style={[styles.filterChip, history?.filter === "drafts" && styles.filterChipActive]}
-          >
-            <Text style={[styles.filterText, history?.filter === "drafts" && styles.filterTextActive]}>Drafts</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => history?.setFilter?.("exported")}
-            style={[styles.filterChip, history?.filter === "exported" && styles.filterChipActive]}
-          >
-            <Text style={[styles.filterText, history?.filter === "exported" && styles.filterTextActive]}>Exported</Text>
-          </Pressable>
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", backgroundColor: "#fff", marginTop: 8, marginBottom: 8 }}>
+        {/* chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}
+          style={{ flexGrow: 1 }}
+        >
+          {(["all", "drafts", "exported"] as const).map((f) => {
+            const active = history?.filter === f;
+            return (
+              <Pressable
+                key={f}
+                onPress={() => history?.setFilter?.(f)}
+                style={{
+                  paddingHorizontal: 14,
+                  height: 36,
+                  borderRadius: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: active ? "#000" : "#EDEEEF",
+                  marginRight: 8,
+                }}
+              >
+                <Text style={{ color: active ? "#FFF" : "#111", fontWeight: "600", textTransform: "capitalize" }}>
+                  {f}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
+
+        {/* sort toggle pinned on the right */}
         <Pressable
           onPress={() => history?.setSort?.(history?.sort === "newest" ? "oldest" : "newest")}
-          style={styles.sortButton}
+          style={{ paddingHorizontal: 6, paddingVertical: 8 }}
         >
-          <Text style={styles.sortText}>{history?.sort === "newest" ? "Newest" : "Oldest"}</Text>
+          <Text style={{ color: "#1d4ed8", fontWeight: "700" }}>
+            {history?.sort === "newest" ? "Oldest" : "Newest"}
+          </Text>
         </Pressable>
       </View>
 
@@ -193,46 +211,6 @@ function HistoryScreenImpl() {
 }
 
 const styles = StyleSheet.create({
-  filterContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    backgroundColor: "#fff",
-  },
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
-    flex: 1,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: "#f3f4f6",
-  },
-  filterChipActive: {
-    backgroundColor: "#000",
-  },
-  filterText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-  },
-  filterTextActive: {
-    color: "#fff",
-  },
-  sortButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  sortText: {
-    fontSize: 14,
-    color: "#2563eb",
-    fontWeight: "600",
-  },
   itemContainer: {
     flexDirection: "row",
     alignItems: "flex-start",

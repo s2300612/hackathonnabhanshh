@@ -1,93 +1,100 @@
 import React, { useState } from "react";
-import { Link, useRouter } from "expo-router";
-import { KeyboardAvoidingView, Platform } from "react-native";
-import { View, Text } from "@/components/ui";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
-import { getItem, setItem } from "@/lib/storage";
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, Link } from "expo-router";
+import { observer } from "mobx-react-lite";
+import { useAuth } from "@/stores/auth-store";
 
-type User = { email: string; name: string; password: string };
-type UsersMap = Record<string, User>;
-
-export default function RegisterScreen() {
+function RegisterImpl() {
+  const auth = useAuth();
   const router = useRouter();
-  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function onRegister() {
-    setError(null);
-    if (!email.trim() || !password.trim()) {
-      setError("Please fill in all fields.");
-      return;
-    }
+  const isValid = auth.isValidEmail(email) && password.length >= 6 && !auth.loading;
+
+  const handleRegister = async () => {
     try {
-      setLoading(true);
-      // Very basic client-side "accounts" just for demo
-      const users = (await getItem<UsersMap>("users")) || {};
-      if (users[email]) {
-        setError("An account with this email already exists.");
-        return;
-      }
-      users[email] = { email, name: "", password };
-      await setItem("users", users);
-
-      // Registration successful, redirect to login
-      router.replace("/login");
-    } catch (e: any) {
-      setError("Registration failed. Please try again.");
-    } finally {
-      setLoading(false);
+      await auth.register(email, password);
+      router.replace("/(app)/camera-advanced");
+    } catch (e) {
+      // Error is set in authStore.error
     }
-  }
+  };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1"
-    >
-      <View className="flex-1 bg-white px-5 dark:bg-neutral-950">
-        <View className="mt-16">
-          <Text className="text-3xl font-bold text-black dark:text-white">
-            Create account
-          </Text>
-          <Text className="mt-2 text-neutral-600 dark:text-neutral-300">
-            Set up your profile to continue.
-          </Text>
-        </View>
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingTop: 32 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={{ fontSize: 28, fontWeight: "700", marginBottom: 8 }}>Create account</Text>
+          <Text style={{ color: "#666", marginBottom: 24 }}>Sign up to start using the app.</Text>
 
-        <View className="mt-8 gap-4">
-          <Input
+          <TextInput
             placeholder="Email"
-            keyboardType="email-address"
             autoCapitalize="none"
+            keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ddd",
+              borderRadius: 8,
+              padding: 12,
+              marginBottom: 12,
+              backgroundColor: "#fff",
+            }}
           />
-          <Input
-            placeholder="Password"
+
+          <TextInput
+            placeholder="Password (min 6 characters)"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ddd",
+              borderRadius: 8,
+              padding: 12,
+              marginBottom: 12,
+              backgroundColor: "#fff",
+            }}
           />
-          {error ? <Text className="text-red-600">{error}</Text> : null}
-          <Button label="Register" onPress={onRegister} loading={loading} />
-        </View>
 
-        <View className="mt-6 flex-row">
-          <Text className="text-neutral-600 dark:text-neutral-300">
-            Already have an account?{" "}
-          </Text>
-          <Link href="/login">
-            <Text className="font-semibold text-blue-600 dark:text-blue-400">
-              Log in
+          {auth.error && (
+            <Text style={{ color: "#ef4444", marginBottom: 12, fontSize: 14 }}>{auth.error}</Text>
+          )}
+
+          <Pressable
+            onPress={handleRegister}
+            disabled={!isValid}
+            style={{
+              backgroundColor: isValid ? "#222" : "#ccc",
+              padding: 14,
+              borderRadius: 8,
+              marginBottom: 16,
+              opacity: isValid ? 1 : 0.6,
+            }}
+          >
+            <Text style={{ color: "#fff", textAlign: "center", fontWeight: "700" }}>
+              {auth.loading ? "Creating account..." : "Register"}
             </Text>
-          </Link>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+          </Pressable>
+
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>
+            <Text>Already have an account? </Text>
+            <Link href="/login" asChild>
+              <Pressable>
+                <Text style={{ color: "#2563eb", fontWeight: "600" }}>Log in</Text>
+              </Pressable>
+            </Link>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+export default observer(RegisterImpl);

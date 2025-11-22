@@ -1,13 +1,14 @@
 // app/_layout.tsx
 import "../../global.css";
 import React, { useState, createContext, useContext, useEffect } from "react";
-import { Stack, useRouter, usePathname, useSegments } from "expo-router";
+import { Stack, useRouter, usePathname, useSegments, Slot } from "expo-router";
 import { ThemeProvider, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import FlashMessage from "react-native-flash-message";
 import { StyleSheet } from "react-native";
-import { AuthProvider, useAuth } from "@/lib/auth"; // if alias fails, use ../src/lib/auth
+import { StatusBar } from "expo-status-bar";
+import { StoresProvider } from "@/stores";
 
 // --- simple contexts you had ---
 const ThemeContext = createContext({ dark: false });
@@ -23,48 +24,27 @@ function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <AuthProvider>
-        <ThemeContext.Provider value={{ dark: isDark }}>
-          <ThemeProvider value={navigationTheme}>
-            <APIProvider>
-              <BottomSheetModalProvider>
-                {children}
-                <FlashMessage position="top" />
-              </BottomSheetModalProvider>
-            </APIProvider>
-          </ThemeProvider>
-        </ThemeContext.Provider>
-      </AuthProvider>
+      <StatusBar style="dark" />
+      <ThemeContext.Provider value={{ dark: isDark }}>
+        <ThemeProvider value={navigationTheme}>
+          <APIProvider>
+            <BottomSheetModalProvider>
+              {children}
+              <FlashMessage position="top" />
+            </BottomSheetModalProvider>
+          </APIProvider>
+        </ThemeProvider>
+      </ThemeContext.Provider>
     </GestureHandlerRootView>
   );
 }
 
 // --- Auth gate: redirects between public and protected areas ---
+// Note: The (app)/_layout.tsx now handles auth routing, so this Gate is simplified
 function Gate({ children }: { children: React.ReactNode }) {
-  const { token, status } = useAuth();           // 'idle' | 'signOut' | 'signIn'
-  const router = useRouter();
-  const pathname = usePathname();
-  const segments = useSegments();                 // e.g. "/login", "/register", "/(app)"
-  const loading = status === "idle";   
-
-  const inProtected = pathname === "/" || segments[0] === "(app)";
-
-  React.useEffect(() => {
-  if (loading) return;
-
-  if (!token && inProtected && pathname !== "/login") {
-    router.replace("/login");
-    return;
-  }
-
-  if (token && !inProtected && pathname !== "/") {
-    router.replace("/");
-  }
-}, [loading, token, inProtected, pathname, router]);
-
-
-  console.log("GATE", { status, hasToken: !!token, pathname, segments, inProtected });
-  return loading ? null : <>{children}</>;
+  // The (app)/_layout.tsx handles the actual auth checks and redirects
+  // This Gate just passes through for now
+  return <>{children}</>;
 }
 
 
@@ -72,15 +52,13 @@ function Gate({ children }: { children: React.ReactNode }) {
 // ---- SINGLE default export (keep just this one) ----
 export default function RootLayout() {
   return (
-    <Providers>
-      <Gate>
-        <Stack>
-          <Stack.Screen name="(app)" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-        </Stack>
-      </Gate>
-    </Providers>
+    <StoresProvider>
+      <Providers>
+        <Gate>
+          <Slot />
+        </Gate>
+      </Providers>
+    </StoresProvider>
   );
 }
 

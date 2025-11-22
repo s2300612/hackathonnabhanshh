@@ -11,7 +11,11 @@ import { useStores } from "@/stores";
 function CameraAdvancedImpl() {
   const [camPerm, requestCamPerm] = useCameraPermissions();
   const router = useRouter();
-  const { camera } = useStores();
+  const { auth, camera } = useStores();
+
+  React.useEffect(() => {
+    if (!auth.signedIn) router.replace("/login");
+  }, [auth.signedIn, router]);
 
   const [type, setType] = useState<"front" | "back">("back");
   const [flash, setFlash] = useState<"off" | "on" | "auto">("off");

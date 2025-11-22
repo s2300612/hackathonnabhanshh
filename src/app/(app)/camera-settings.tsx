@@ -5,15 +5,22 @@ import Slider from "@react-native-community/slider";
 import { Button } from "@/components/ui/button";
 import { STORAGE_CAMERA_PREFS } from "@/lib/camera-permissions";
 import { TINT_SWATCHES } from "@/lib/tint";
-import { useAuth } from "@/lib/auth";
+import { observer } from "mobx-react-lite";
+import { useStores } from "@/stores";
+import { useRouter } from "expo-router";
 
 type Look = "none" | "night" | "thermal" | "tint";
 type Prefs = { defaultLook: Look; defaultTint: string };
 
 const DEFAULTS: Prefs = { defaultLook: "none", defaultTint: TINT_SWATCHES[0] };
 
-export default function CameraSettings() {
-  const { signOut, token } = useAuth();
+function CameraSettingsImpl() {
+  const router = useRouter();
+  const { auth } = useStores();
+
+  React.useEffect(() => {
+    if (!auth.signedIn) router.replace("/login");
+  }, [auth.signedIn, router]);
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [tintAlpha, setTintAlpha] = useState(0.3);
@@ -123,15 +130,22 @@ export default function CameraSettings() {
 
       <View style={{ marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: "#e5e7eb", gap: 16 }}>
         <Text style={{ fontSize: 18, fontWeight: "700" }}>Account</Text>
-        <Text>Signed in: {token ? "Yes" : "No"}</Text>
-        <Pressable
-          onPress={signOut}
-          style={{ padding: 12, borderRadius: 10, backgroundColor: "#e53935", alignSelf: "flex-start" }}
-        >
-          <Text style={{ color: "white", fontWeight: "800" }}>Sign out</Text>
-        </Pressable>
+        <Text>Signed in: {auth.isAuthed ? "Yes" : "No"}</Text>
+        {auth.isAuthed && (
+          <Pressable
+            onPress={() => {
+              auth.logout();
+              router.replace("/login");
+            }}
+            style={{ padding: 12, borderRadius: 10, backgroundColor: "#e53935", alignSelf: "flex-start" }}
+          >
+            <Text style={{ color: "white", fontWeight: "800" }}>Sign out</Text>
+          </Pressable>
+        )}
       </View>
     </ScrollView>
   );
 }
+
+export default observer(CameraSettingsImpl);
 

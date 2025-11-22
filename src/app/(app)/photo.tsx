@@ -67,10 +67,12 @@ const tintOverlay = (hex: string, alpha: number) => {
 
 
 function PhotoEditorImpl() {
-
   const router = useRouter();
+  const { auth, history } = useStores();
 
-  const { history } = useStores();
+  React.useEffect(() => {
+    if (!auth.signedIn) router.replace("/login");
+  }, [auth.signedIn, router]);
 
   const params = useLocalSearchParams<{
     uri?: string | string[];
