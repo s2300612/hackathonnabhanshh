@@ -1,16 +1,36 @@
-import React from "react";
+import React, { createContext, useContext } from "react";
 
 import { CameraStore } from "./camera-store";
 
-export const stores = {
+import { historyStore, HistoryStore } from "./history-store";
 
-  camera: new CameraStore(),
+
+
+type RootStores = {
+
+  camera: CameraStore;
+
+  history: HistoryStore;
 
 };
 
-const StoresContext = React.createContext(stores);
 
-export const useStores = () => React.useContext(StoresContext);
+
+export const stores: RootStores = {
+
+  camera: new CameraStore(),
+
+  history: historyStore,
+
+};
+
+
+
+const StoresContext = createContext(stores);
+
+export const useStores = () => useContext(StoresContext);
+
+
 
 export default function StoresProvider({ children }: { children: React.ReactNode }) {
 
@@ -25,4 +45,9 @@ export default function StoresProvider({ children }: { children: React.ReactNode
   );
 
 }
+
+
+
+export type { EditEntry, HistoryItem, EffectKind } from "./history-store";
+
 

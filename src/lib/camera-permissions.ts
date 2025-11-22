@@ -4,22 +4,87 @@ import * as MediaLibrary from "expo-media-library";
 
 import { Camera, PermissionResponse } from "expo-camera";
 
+
+
 export type MediaPerm = { canRead: boolean; canWrite: boolean };
 
+
+
 export async function requestCameraPermission(): Promise<PermissionResponse> {
+
   return Camera.requestCameraPermissionsAsync();
+
 }
 
+
+
+/**
+
+ * On Android in Expo Go, we must NOT request granular read permissions
+
+ * (images/video/audio) because Expo Go's manifest may not declare AUDIO.
+
+ * We only request WRITE so saves work; reads are guarded.
+
+ */
+
 export async function requestMediaPermission(): Promise<MediaPerm> {
-  // iOS: one dialog covers read+write. Android + Expo Go: passing true requests write only.
-  if (Platform.OS === "ios") {
-    const p = await MediaLibrary.requestPermissionsAsync();
-    return { canRead: p.granted, canWrite: p.granted };
+
+  try {
+
+    if (Platform.OS === "ios") {
+
+      const p = await MediaLibrary.requestPermissionsAsync(); // read+write
+
+      return { canRead: p.granted, canWrite: p.granted };
+
+    }
+
+    // ANDROID: WRITE ONLY (boolean true == writeOnly)
+
+    const p = await MediaLibrary.requestPermissionsAsync(true);
+
+    return { canRead: false, canWrite: !!p.granted };
+
+  } catch {
+
+    return { canRead: false, canWrite: false };
+
   }
-  const p = await MediaLibrary.requestPermissionsAsync(true);
-  return { canRead: p.granted, canWrite: p.granted };
+
 }
+
+
+
+/** Return current status without requesting extra scopes */
+
+export async function getMediaPermission(): Promise<MediaPerm> {
+
+  try {
+
+    if (Platform.OS === "ios") {
+
+      const p = await MediaLibrary.getPermissionsAsync();
+
+      return { canRead: p.granted, canWrite: p.granted };
+
+    }
+
+    // In Expo Go we treat read as false; write reflects current grant.
+
+    const p = await MediaLibrary.getPermissionsAsync(true);
+
+    return { canRead: false, canWrite: !!p.granted };
+
+  } catch {
+
+    return { canRead: false, canWrite: false };
+
+  }
+
+}
+
+
 
 export const ALBUM = "NabhanCamera";
 export const STORAGE_CAMERA_PREFS = "camera.prefs.v1";
-

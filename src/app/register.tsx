@@ -1,80 +1,93 @@
-// app/register.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
+import { KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text } from "@/components/ui";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { getItem, setItem } from "@/lib/storage";
 
 type User = { email: string; name: string; password: string };
 type UsersMap = Record<string, User>;
 
-export default function Register() {
+export default function RegisterScreen() {
+  const router = useRouter();
   const { signIn } = useAuth();
-
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function onRegister() {
-    // Very basic client-side "accounts" just for demo
-    const users = (await getItem<UsersMap>("users")) || {};
-    if (users[email]) {
-      alert("An account with this email already exists.");
+    setError(null);
+    if (!email.trim() || !password.trim()) {
+      setError("Please fill in all fields.");
       return;
     }
-    users[email] = { email, name, password };
-    await setItem("users", users);
+    try {
+      setLoading(true);
+      // Very basic client-side "accounts" just for demo
+      const users = (await getItem<UsersMap>("users")) || {};
+      if (users[email]) {
+        setError("An account with this email already exists.");
+        return;
+      }
+      users[email] = { email, name: "", password };
+      await setItem("users", users);
 
-    // Normally you'd call your API → receive tokens
-    await signIn({ access: "dummy-access", refresh: "dummy-refresh" });
+      // Registration successful, redirect to login
+      router.replace("/login");
+    } catch (e: any) {
+      setError("Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0b0f13", padding: 16, gap: 12 }}>
-      <Text style={{ color: "white", fontSize: 22, fontWeight: "800" }}>Create account</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      className="flex-1"
+    >
+      <View className="flex-1 bg-white px-5 dark:bg-neutral-950">
+        <View className="mt-16">
+          <Text className="text-3xl font-bold text-black dark:text-white">
+            Create account
+          </Text>
+          <Text className="mt-2 text-neutral-600 dark:text-neutral-300">
+            Set up your profile to continue.
+          </Text>
+        </View>
 
-      <TextInput
-        placeholder="Full name"
-        placeholderTextColor="#9fb1c7"
-        value={name}
-        onChangeText={setName}
-        style={inputStyle}
-      />
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor="#9fb1c7"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-        style={inputStyle}
-      />
-      <TextInput
-        placeholder="Password"
-        placeholderTextColor="#9fb1c7"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        style={inputStyle}
-      />
+        <View className="mt-8 gap-4">
+          <Input
+            placeholder="Email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <Input
+            placeholder="Password"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+          {error ? <Text className="text-red-600">{error}</Text> : null}
+          <Button label="Register" onPress={onRegister} loading={loading} />
+        </View>
 
-      <Pressable
-        onPress={onRegister}
-        style={{ backgroundColor: "#2b89ff", padding: 12, borderRadius: 10, alignItems: "center" }}
-      >
-        <Text style={{ color: "white", fontWeight: "800" }}>Register</Text>
-      </Pressable>
-
-      <Link href="/login" style={{ color: "#9fb1c7", textAlign: "center", marginTop: 8 }}>
-        Already have an account? Log in
-      </Link>
-    </View>
+        <View className="mt-6 flex-row">
+          <Text className="text-neutral-600 dark:text-neutral-300">
+            Already have an account?{" "}
+          </Text>
+          <Link href="/login">
+            <Text className="font-semibold text-blue-600 dark:text-blue-400">
+              Log in
+            </Text>
+          </Link>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
-
-const inputStyle = {
-  backgroundColor: "#1d2733",
-  color: "white",
-  padding: 12,
-  borderRadius: 10,
-} as const;

@@ -1,202 +1,331 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
-import { View, Text, Image, Pressable, Alert, StyleSheet } from "react-native";
+import { View, Text, Image, Alert, StyleSheet, ScrollView, Pressable } from "react-native";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { observer } from "mobx-react-lite";
 
-import ViewShot from "react-native-view-shot";
+import ViewShot, { captureRef } from "react-native-view-shot";
 
 import * as MediaLibrary from "expo-media-library";
 
 import Slider from "@react-native-community/slider";
 
-import { requestMediaPermission, ALBUM } from "@/lib/camera-permissions";
+import { Button } from "@/components/ui/button";
 
 import { useStores } from "@/stores";
 
-import type { Look } from "@/stores/camera-store";
+import { withTimeout } from "@/lib/promise-timeout";
+
+import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
+
+
+
+// --- Helpers (kept local so nothing odd gets spread into JSX) ---
+
+type Look = "none" | "night" | "thermal" | "tint";
+
+
+
+const thermalOverlay = (alpha: number) => ({
+
+  backgroundColor: `rgba(255,0,0,${alpha})`,
+
+});
+
+
+
+const nightOverlay = (alpha: number) => ({
+
+  backgroundColor: `rgba(0,255,128,${alpha})`,
+
+});
+
+
+
+const tintOverlay = (hex: string, alpha: number) => {
+
+  // simple hex → rgba
+
+  const v = hex.replace("#", "");
+
+  const r = parseInt(v.slice(0, 2), 16);
+
+  const g = parseInt(v.slice(2, 4), 16);
+
+  const b = parseInt(v.slice(4, 6), 16);
+
+  return { backgroundColor: `rgba(${r},${g},${b},${alpha})` };
+
+};
+
+
+
+// ----------------------------------------------------------------
 
 
 
 function PhotoEditorImpl() {
 
-  const { uri } = useLocalSearchParams<{ uri: string }>();
-
   const router = useRouter();
 
-  const { camera } = useStores();
+  const { history } = useStores();
 
+  const params = useLocalSearchParams<{
+    uri?: string | string[];
+    mode?: "edit" | "new";
+    sourceUri?: string;
+    effect?: Look;
+    tintHex?: string;
+    strength?: string;
+    editId?: string;
+    autoExport?: string;
+  }>();
 
+  // Resolve URI from params
+  const uri = useMemo(() => {
+    if (params.sourceUri) return String(params.sourceUri);
+    const raw = params.uri;
+    return typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : "";
+  }, [params.uri, params.sourceUri]);
 
-  // Initialize from store, but allow local overrides for this editing session
+  const shotRef = useRef<ViewShot>(null);
 
-  const [look, setLook] = useState<Look>(camera.look);
+  // Initialize state from params if in edit mode, otherwise defaults
+  const [look, setLook] = useState<Look>(() => (params.effect as Look) || "none");
+  const [tint, setTint] = useState(() => params.tintHex || "#22c55e");
+  const [strength, setStrength] = useState(() => {
+    if (params.strength) {
+      const parsed = parseFloat(params.strength);
+      return isNaN(parsed) ? 0.35 : parsed;
+    }
+    return 0.35;
+  });
 
-  const [tint, setTint] = useState(camera.tint);
+  const [exporting, setExporting] = useState(false);
+  const [editId, setEditId] = useState<string | null>(() => params.editId || null);
 
-  const [night, setNight] = useState(camera.night);
-
-  const [thermal, setThermal] = useState(camera.thermal);
-
-  const [tintAlpha, setTintAlpha] = useState(camera.tintAlpha);
-
-  const [busy, setBusy] = useState(false);
-
-
-
-  // Sync local state when store changes (e.g., from Settings screen)
-
+  // Create draft entry if not in edit mode (new edit)
   useEffect(() => {
+    if (!uri || editId || params.mode === "edit") return; // Skip if already has editId or in edit mode
 
-    setLook(camera.look);
+    const entry = history.addDraft({
+      sourceUri: String(uri),
+      effect: look,
+      tintHex: look === "tint" ? tint : undefined,
+      strength: strength,
+    });
 
-    setTint(camera.tint);
-
-    setNight(camera.night);
-
-    setThermal(camera.thermal);
-
-    setTintAlpha(camera.tintAlpha);
-
-  }, [camera.look, camera.tint, camera.night, camera.thermal, camera.tintAlpha]);
-
-
-
-  const viewRef = useRef<ViewShot>(null);
+    setEditId(entry.id);
+  }, [uri, editId, params.mode, history, look, tint, strength]);
 
 
 
-  const overlay = useMemo(() => {
+  const overlayStyle = useMemo(() => {
 
-    if (look === "night") return { backgroundColor: `rgba(0,128,64,${night})` };
+    if (look === "night") return nightOverlay(strength);
 
-    if (look === "thermal") return { backgroundColor: `rgba(255,0,0,${thermal})` };
+    if (look === "thermal") return thermalOverlay(strength);
 
-    if (look === "tint") return { backgroundColor: hexToRgba(tint, tintAlpha) };
+    if (look === "tint") return tintOverlay(tint, strength);
 
-    return {};
+    return null;
 
-  }, [look, night, thermal, tint, tintAlpha]);
+  }, [look, tint, strength]);
 
 
 
-  const onExport = async () => {
+  if (!uri) {
 
-    if (!viewRef.current) return;
+    return (
+
+      <View style={styles.center}>
+
+        <Text>No image received.</Text>
+
+        <Button label="Back" onPress={() => router.replace("/(app)/album")} fullWidth={false} />
+
+      </View>
+
+    );
+
+  }
+
+
+
+  const onExport = useCallback(async () => {
+
+    if (exporting || !uri) return;
+
+    setExporting(true);
+
+
 
     try {
 
-      setBusy(true);
-
-      const tmpPath = await viewRef.current.capture?.({
-
-        format: "jpg",
-
-        quality: 0.92,
-
-        result: "tmpfile",
-
-      });
-
-      if (!tmpPath) throw new Error("Capture failed");
-
-
-
-      const perm = await requestMediaPermission();
-
-      if (!perm.canWrite) throw new Error("No Photos/Media write permission");
-
-
-
-      const asset = await MediaLibrary.createAssetAsync(tmpPath);
-
-      let album = await MediaLibrary.getAlbumAsync(ALBUM);
-
-      if (!album) album = await MediaLibrary.createAlbumAsync(ALBUM, asset, false);
-
-      else await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      // If we have an editId, update existing entry; otherwise create new draft (re-edit case)
+      let currentEditId = editId;
+      
+      if (!currentEditId) {
+        // Re-edit case: create new draft entry
+        const entry = history.addDraft({
+          sourceUri: String(uri),
+          effect: look,
+          tintHex: look === "tint" ? tint : undefined,
+          strength: strength,
+        });
+        currentEditId = entry.id;
+        setEditId(currentEditId);
+      } else {
+        // Update existing entry with current settings
+        const entry = history.recentEdits.find((e) => e.id === currentEditId);
+        if (entry && entry.status === "draft") {
+          // Only update if it's still a draft
+          entry.effect = look;
+          entry.tintHex = look === "tint" ? tint : undefined;
+          entry.strength = strength;
+          entry.updatedAt = Date.now();
+        }
+      }
 
 
 
-      Alert.alert("Exported", "A baked copy was saved to your gallery.");
+      // capture with timeout guard so it never hangs
+
+      const snapUri = await withTimeout(
+
+        captureRef(shotRef, { format: "jpg", quality: 0.9, result: "tmpfile" }),
+
+        12000,
+
+        "Export took too long"
+
+      );
+
+
+
+      // Check permissions before any MediaLibrary calls
+
+      const { canRead, canWrite } = await getMediaPermission();
+
+      // 1) Always call createAssetAsync (requires write permission)
+
+      if (!canWrite) {
+
+        Alert.alert(
+
+          "Photos permission needed",
+
+          "Enable Photos/Media permission to export.",
+
+          [{ text: "OK" }]
+
+        );
+
+        return;
+
+      }
+
+      const asset = await MediaLibrary.createAssetAsync(String(snapUri));
+
+
+
+      // 2) Only manage a named album if READ is granted
+
+      if (canRead) {
+
+        let album = await MediaLibrary.getAlbumAsync(ALBUM);
+
+        if (!album) {
+
+          album = await MediaLibrary.createAlbumAsync(ALBUM, asset, false);
+
+        } else {
+
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+
+        }
+
+      }
+
+
+
+      // Mark the entry as exported
+      if (currentEditId) {
+        history.markExported(currentEditId, asset.uri);
+      }
+
+
+
+      Alert.alert("Exported", "Saved a copy to your gallery.");
+      
+      // Navigate back after successful export
+      router.replace("/(app)/album");
 
     } catch (e: any) {
 
-      Alert.alert("Export error", String(e?.message ?? e));
+      Alert.alert("Export failed", String(e?.message ?? e));
 
     } finally {
 
-      setBusy(false);
+      setExporting(false);
 
     }
 
-  };
+  }, [uri, exporting, editId, look, strength, tint, history, router]);
 
-
-
-  if (!uri) return <Text style={{ padding: 16 }}>No image selected.</Text>;
+  // Auto-export if requested (only once on mount)
+  const autoExportRef = useRef(false);
+  useEffect(() => {
+    if (params.autoExport === "true" && !autoExportRef.current && !exporting && uri && editId) {
+      autoExportRef.current = true;
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        onExport();
+      }, 500);
+    }
+  }, [params.autoExport, uri, editId, exporting, onExport]);
 
 
 
   return (
 
-    <View style={{ flex: 1, padding: 16 }}>
+    <ScrollView contentContainerStyle={styles.container}>
 
-      <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 8 }}>photo</Text>
+      <Text style={styles.title}>photo</Text>
 
 
 
-      <ViewShot ref={viewRef} style={{ borderRadius: 12, overflow: "hidden" }}>
+      <ViewShot ref={shotRef} style={styles.frame} options={{ format: "jpg", quality: 0.95 }}>
 
-        <View style={{ width: "100%", aspectRatio: 1, position: "relative" }}>
+        <Image source={{ uri }} style={styles.image} resizeMode="contain" />
 
-          <Image source={{ uri: String(uri) }} style={{ width: "100%", height: "100%" }} />
-
-          {look !== "none" && <View style={[StyleSheet.absoluteFill, overlay]} />}
-
-        </View>
+        {overlayStyle && <View pointerEvents="none" style={[StyleSheet.absoluteFill, overlayStyle]} />}
 
       </ViewShot>
 
 
 
-      <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+      <View style={styles.row}>
 
         {(["none", "night", "thermal", "tint"] as Look[]).map((l) => (
 
-          <Pressable
+          <Button
 
             key={l}
 
-            onPress={() => {
+            label={l}
 
-              setLook(l);
+            size="sm"
 
-              camera.setLook(l);
+            variant={look === l ? "default" : "outline"}
 
-            }}
+            onPress={() => setLook(l)}
 
-            style={{
+            fullWidth={false}
 
-              paddingVertical: 6,
-
-              paddingHorizontal: 12,
-
-              borderRadius: 8,
-
-              borderWidth: 1,
-
-              backgroundColor: look === l ? "#000" : "#fff",
-
-            }}
-
-          >
-
-            <Text style={{ color: look === l ? "#fff" : "#000" }}>{l}</Text>
-
-          </Pressable>
+          />
 
         ))}
 
@@ -204,157 +333,69 @@ function PhotoEditorImpl() {
 
 
 
-      {look === "night" && (
-
-        <>
-
-          <Text style={{ marginTop: 12 }}>Night strength</Text>
-
-          <Slider
-
-            value={night}
-
-            onValueChange={(v) => {
-
-              setNight(v);
-
-              camera.setNight(v);
-
-            }}
-
-            minimumValue={0}
-
-            maximumValue={0.8}
-
-            step={0.02}
-
-          />
-
-        </>
-
-      )}
-
-
-
-      {look === "thermal" && (
-
-        <>
-
-          <Text style={{ marginTop: 12 }}>Thermal strength</Text>
-
-          <Slider
-
-            value={thermal}
-
-            onValueChange={(v) => {
-
-              setThermal(v);
-
-              camera.setThermal(v);
-
-            }}
-
-            minimumValue={0}
-
-            maximumValue={0.8}
-
-            step={0.02}
-
-          />
-
-        </>
-
-      )}
-
-
-
       {look === "tint" && (
 
-        <>
+        <View style={styles.row}>
 
-          <Text style={{ marginTop: 12 }}>Tint</Text>
+          {["#22c55e", "#3b82f6", "#ef4444", "#f59e0b", "#a855f7"].map((c) => (
 
-          <View style={{ flexDirection: "row", gap: 8, marginVertical: 6 }}>
+            <Pressable
 
-            {["#22c55e", "#3b82f6", "#ef4444", "#f59e0b", "#a855f7"].map((c) => (
+              key={c}
 
-              <Pressable
+              onPress={() => setTint(c)}
 
-                key={c}
+              style={[
 
-                onPress={() => {
+                { width: 32, height: 32, borderRadius: 16, backgroundColor: c, borderWidth: tint === c ? 2 : 1, borderColor: tint === c ? "#000" : "#ccc" }
 
-                  setTint(c);
+              ]}
 
-                  camera.setTint(c);
+            />
 
-                }}
+          ))}
 
-                style={{
-
-                  width: 28,
-
-                  height: 28,
-
-                  borderRadius: 14,
-
-                  backgroundColor: c,
-
-                  borderWidth: tint === c ? 2 : 0,
-
-                }}
-
-              />
-
-            ))}
-
-          </View>
-
-          <Text>Tint strength</Text>
-
-          <Slider
-
-            value={tintAlpha}
-
-            onValueChange={(v) => {
-
-              setTintAlpha(v);
-
-              camera.setTintAlpha(v);
-
-            }}
-
-            minimumValue={0}
-
-            maximumValue={0.8}
-
-            step={0.02}
-
-          />
-
-        </>
+        </View>
 
       )}
 
 
 
-      <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
+      {look !== "none" && (
 
-        <Pressable onPress={() => router.back()} style={btn("outline")}>
+        <View style={{ gap: 8 }}>
 
-          <Text>Back</Text>
+          <Text>Strength</Text>
 
-        </Pressable>
+          <Slider
 
-        <Pressable disabled={busy} onPress={onExport} style={btn("solid")}>
+            value={strength}
 
-          <Text style={{ color: "#fff" }}>{busy ? "Exporting…" : "Export"}</Text>
+            onValueChange={setStrength}
 
-        </Pressable>
+            minimumValue={0}
+
+            maximumValue={1}
+
+            step={0.05}
+
+          />
+
+        </View>
+
+      )}
+
+
+
+      <View style={styles.row}>
+
+        <Button label="Back" onPress={() => router.replace("/(app)/album")} fullWidth={false} />
+
+        <Button label={exporting ? "Exporting…" : "Export"} onPress={onExport} disabled={exporting} />
 
       </View>
 
-    </View>
+    </ScrollView>
 
   );
 
@@ -362,40 +403,22 @@ function PhotoEditorImpl() {
 
 
 
+const styles = StyleSheet.create({
+
+  container: { padding: 16, gap: 12 },
+
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16, gap: 12 },
+
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
+
+  frame: { aspectRatio: 3 / 4, borderRadius: 12, overflow: "hidden", backgroundColor: "#111" },
+
+  image: { width: "100%", height: "100%" },
+
+  row: { flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" },
+
+});
+
+
+
 export default observer(PhotoEditorImpl);
-
-
-
-function hexToRgba(hex: string, a = 0.3) {
-
-  const n = hex.replace("#", "");
-
-  const r = parseInt(n.slice(0, 2), 16);
-
-  const g = parseInt(n.slice(2, 4), 16);
-
-  const b = parseInt(n.slice(4, 6), 16);
-
-  return `rgba(${r},${g},${b},${a})`;
-
-}
-
-
-
-function btn(kind: "solid" | "outline") {
-
-  return {
-
-    paddingVertical: 10,
-
-    paddingHorizontal: 16,
-
-    borderRadius: 8,
-
-    borderWidth: kind === "outline" ? 1 : 0,
-
-    backgroundColor: kind === "solid" ? "#111" : "transparent",
-
-  };
-
-}

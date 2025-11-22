@@ -1,135 +1,214 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Image, Pressable, Text, View } from "react-native";
+import { View, Text, FlatList, Image, Pressable, Alert } from "react-native";
 import * as MediaLibrary from "expo-media-library";
+import * as ImagePicker from "expo-image-picker";
 import { observer } from "mobx-react-lite";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
-import { requestMediaPermission, ALBUM } from "@/lib/camera-permissions";
 import { useStores } from "@/stores";
+import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
+
+type Shot = { id: string; uri: string; picked?: boolean };
 
 function AlbumScreenImpl() {
-  const [canRead, setCanRead] = useState(false);
-  const [deviceShots, setDeviceShots] = useState<{ id: string; uri: string }[]>([]);
   const router = useRouter();
-  const { camera } = useStores();
+  const { camera, history } = useStores();
+  const [items, setItems] = useState<Shot[]>([]);
+  const [canRead, setCanRead] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (hasRead: boolean) => {
+    setLoading(true);
     try {
+      if (!hasRead) {
+        setItems([]);
+        return; // never touch device album
+      }
+
       const album = await MediaLibrary.getAlbumAsync(ALBUM);
-      if (!album) { setDeviceShots([]); return; }
-      const result = await MediaLibrary.getAssetsAsync({
-        album, mediaType: ["photo"], first: 200, sortBy: [["creationTime", false]],
+      if (!album) {
+        setItems([]);
+        return;
+      }
+
+      const assets = await MediaLibrary.getAssetsAsync({
+        album,
+        mediaType: ["photo"],
+        first: 200,
+        sortBy: [[MediaLibrary.SortBy.creationTime, false]],
       });
-      const list = result.assets
+
+      const list = assets.assets
         .map(a => ({ id: String(a.id), uri: String(a.uri) }))
-        .filter(x => x.uri.length > 0);
+        .filter(x => x.uri);
+
       const uniq = new Map(list.map(x => [x.id, x]));
-      setDeviceShots(Array.from(uniq.values()));
-    } catch (e: any) {
-      console.warn("Album load error", e?.message ?? e);
+      setItems(Array.from(uniq.values()));
+    } catch (e) {
+      console.warn("Album load error", e);
       Alert.alert("Album error", "Unable to read the device album.");
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Combine device album (if available) with MobX recent shots
-  const allShots = useMemo(() => {
-    if (canRead && deviceShots.length > 0) {
-      // When device album is available, prefer it
-      return deviceShots;
+  const pickFromGallery = useCallback(async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission", "Gallery permission is required to pick images.");
+        return;
+      }
+
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,      // iOS 14+, Android 13+; falls back to single elsewhere
+        selectionLimit: 0,                  // 0 = no limit (where supported)
+        quality: 1,
+      });
+
+      if (res.canceled) return;
+
+      const picked: Shot[] = (res.assets ?? [])
+        .map((a, idx) => ({
+          id: (a.assetId ?? a.uri ?? `picked-${Date.now()}-${idx}`).toString(),
+          uri: a.uri.toString(),
+          picked: true,
+        }))
+        .filter(x => !!x.uri);
+
+      // Create draft entry and navigate to editor for first picked image
+      if (picked.length > 0) {
+        const firstUri = picked[0].uri;
+        const draft = history.addDraft({
+          sourceUri: firstUri,
+          effect: "none",
+          strength: camera.tintAlpha,
+        });
+        
+        router.push({
+          pathname: "/(app)/photo",
+          params: {
+            mode: "edit",
+            sourceUri: firstUri,
+            effect: "none",
+            strength: String(camera.tintAlpha),
+            editId: draft.id,
+          },
+        });
+      }
+
+      // de-dupe by uri and merge
+      setItems(prev => {
+        const seen = new Set<string>();
+        const merged = [...picked, ...prev].filter(x => {
+          if (seen.has(x.uri)) return false;
+          seen.add(x.uri);
+          return true;
+        });
+        return merged;
+      });
+    } catch (e: any) {
+      Alert.alert("Gallery", String(e?.message ?? e));
     }
-    // Fallback to MobX recent shots
-    return camera.recent;
-  }, [canRead, deviceShots, camera.recent]);
+  }, []);
 
   useEffect(() => {
     (async () => {
-      const mp = await requestMediaPermission();
-      setCanRead(!!mp.canRead);
-      if (mp.canRead) await load();
+      const mp = await getMediaPermission();
+      setCanRead(mp.canRead);
+      await load(mp.canRead); // pass the flag so load() can skip device calls
     })();
   }, [load]);
 
-  if (!canRead) {
-    return (
-      <View style={{ flex:1, padding:16 }}>
-        <Text style={{ fontSize:18, fontWeight:"700" }}>Album</Text>
-        <Text style={{ marginTop:8 }}>
-          Grant Photos/Media permission for Expo Go, then reopen this tab.
-        </Text>
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
-          <Button
-            label="Style"
-            variant="outline"
-            onPress={() => router.push("/(app)/style")}
-            fullWidth={false}
-            size="sm"
-          />
-          <Button
-            label="Process"
-            variant="outline"
-            onPress={() => {
-              if (allShots.length > 0) {
-                router.push({ pathname: "/(app)/process", params: { uri: allShots[0].uri } });
-              } else {
-                Alert.alert("No photos", "Capture some photos first to process them.");
-              }
-            }}
-            fullWidth={false}
-            size="sm"
-          />
-        </View>
-      </View>
-    );
-  }
+  // Combine MediaLibrary items with MobX recent shots as additional fallback
+  const allShots = useMemo(() => {
+    const seen = new Set<string>();
+    const combined: Shot[] = [];
+    
+    // Add MediaLibrary items first (preferred)
+    items.forEach(item => {
+      if (!seen.has(item.uri)) {
+        seen.add(item.uri);
+        combined.push(item);
+      }
+    });
+    
+    // Add MobX recent shots that aren't already included
+    camera.recent.forEach(item => {
+      if (!seen.has(item.uri)) {
+        seen.add(item.uri);
+        combined.push({ id: item.id, uri: item.uri });
+      }
+    });
+    
+    return combined;
+  }, [items, camera.recent]);
+
+  const openEditor = (shot: Shot) => {
+    router.push({ pathname: "/(app)/photo", params: { uri: shot.uri } });
+  };
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ padding: 12, flexDirection: "row", gap: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#e5e7eb" }}>
-        <Button
-          label="Style"
-          variant="outline"
-          onPress={() => router.push("/(app)/style")}
-          fullWidth={false}
-          size="sm"
-        />
-        <Button
-          label="Process"
-          variant="outline"
-          onPress={() => {
-            if (allShots.length > 0) {
-              router.push({ pathname: "/(app)/process", params: { uri: allShots[0].uri } });
-            } else {
-              Alert.alert("No photos", "Capture some photos first to process them.");
-            }
-          }}
-          fullWidth={false}
-          size="sm"
+      <View style={{ flex: 1, padding: 12 }}>
+        <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 8 }}>Album</Text>
+
+        {!canRead && (
+          <View style={{ gap: 8, marginBottom: 12 }}>
+            <Text style={{ opacity: 0.75 }}>
+              Reading the device album is limited until Photos/Media permission is granted.
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Button label="Pick from Gallery" onPress={pickFromGallery} size="sm" />
+            </View>
+          </View>
+        )}
+
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+          <Button
+            label="View History"
+            variant="outline"
+            onPress={() => router.push("/(app)/history")}
+            size="sm"
+            fullWidth={false}
+          />
+        </View>
+
+        <FlatList
+          contentContainerStyle={{ gap: 8, padding: 8 }}
+          numColumns={3}
+          columnWrapperStyle={{ gap: 8 }}
+          data={allShots.filter(i => !!i.uri && i.uri.length > 0)}
+          keyExtractor={(it) => String(it.id)}
+          ListHeaderComponent={
+            !canRead ? (
+              <Text style={{ opacity: 0.7, marginBottom: 8, paddingHorizontal: 8 }}>
+                Showing local only (no read permission).
+              </Text>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <Pressable 
+              onPress={() => openEditor(item)} 
+              style={{ width: "31%", aspectRatio: 1, borderRadius: 8, overflow: "hidden" }}
+            >
+              <Image
+                source={{ uri: item.uri }}
+                style={{ width: "100%", height: "100%", backgroundColor: "#ddd" }}
+              />
+            </Pressable>
+          )}
+          ListEmptyComponent={
+            <Text style={{ marginTop: 12, opacity: 0.75, padding: 16 }}>
+              {loading ? "Loading…" : "No photos yet. Use Pick from Gallery or capture photos in Camera+."}
+            </Text>
+          }
         />
       </View>
-    <FlatList
-        contentContainerStyle={{ padding:8 }}
-        data={allShots}
-        keyExtractor={(it) => it.id}
-      numColumns={3}
-        columnWrapperStyle={{ gap:8 }}
-        ItemSeparatorComponent={() => <View style={{ height:8 }} />}
-      renderItem={({ item }) => (
-        <Pressable
-          onPress={() => router.push({ pathname: "/(app)/photo", params: { uri: item.uri } })}
-            style={{ width:"31%", aspectRatio:1, borderRadius:8, overflow:"hidden" }}
-        >
-            <Image source={{ uri: item.uri }} style={{ width:"100%", height:"100%" }} />
-        </Pressable>
-      )}
-        ListEmptyComponent={
-          <Text style={{ padding:16 }}>
-            {canRead ? `No photos found in ${ALBUM} yet.` : "No recent photos. Capture some in Camera+."}
-          </Text>
-        }
-      />
     </View>
   );
 }
 
 export default observer(AlbumScreenImpl);
-

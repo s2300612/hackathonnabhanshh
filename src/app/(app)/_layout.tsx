@@ -6,6 +6,7 @@ import { Pressable, Text } from '@/components/ui';
 import { useAuth } from '@/lib';
 import { Ionicons } from '@expo/vector-icons';
 import StoresProvider from '@/stores';
+import { requestCameraPermission, requestMediaPermission } from "@/lib/camera-permissions";
 
 export default function TabLayout() {
   const { status } = useAuth();
@@ -19,6 +20,13 @@ export default function TabLayout() {
       }, 1000);
     }
   }, [hideSplash, status]);
+
+  useEffect(() => {
+    // Ask only what we need up front: camera and write-only export.
+    // READ will be requested later only when the user taps "Retry Read".
+    requestCameraPermission();
+    requestMediaPermission();
+  }, []);
 
   
   return (
@@ -45,6 +53,15 @@ export default function TabLayout() {
           title: 'Camera+',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="camera-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time-outline" color={color} size={size} />
           ),
         }}
       />

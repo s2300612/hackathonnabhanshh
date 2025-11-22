@@ -91,7 +91,6 @@ function CameraAdvancedImpl() {
             <Button
               label={flash === "off" ? "Flash Off" : flash === "on" ? "Flash On" : "Flash Auto"}
               size="sm"
-              variant="outline"
               onPress={cycleFlash}
               fullWidth={false}
             />

@@ -1,10 +1,9 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import { useEffect } from "react";
+import { router } from "expo-router";
 
-export default function HomeScreen() {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Home Screen</Text>
-    </View>
-  );
+export default function IndexRedirect() {
+  useEffect(() => {
+    router.replace("/(app)/camera-advanced");
+  }, []);
+  return null;
 }

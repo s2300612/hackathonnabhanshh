@@ -23,6 +23,7 @@
           "recordAudioAndroid": true
         }
       ],
+      "expo-media-library",
       "expo-localization",
       "react-native-edge-to-edge"
     ],
@@ -44,15 +45,21 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Camera used to capture photos for overlays and coursework.",
-        "NSPhotoLibraryAddUsageDescription": "Saves captured photos to your library."
+        "NSCameraUsageDescription": "Allow camera access to take photos.",
+        "NSPhotoLibraryUsageDescription": "Allow access to your photo library to select and save images.",
+        "NSPhotoLibraryAddUsageDescription": "Allow saving edited images to your photo library."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA"
+      ]
     }
   }
 }
