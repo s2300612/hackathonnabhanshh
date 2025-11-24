@@ -8,7 +8,15 @@ import { makePersistable } from "mobx-persist-store";
 
 export type Look = "none" | "night" | "thermal" | "tint";
 
-export type Shot = { id: string; uri: string };
+export type Shot = {
+  id: string;
+  uri: string;          // original source
+  bakedUri?: string;    // baked effect (if available)
+  look?: Look;
+  tint?: string;
+  alpha?: number;
+  createdAt: number;
+};
 
 
 
@@ -66,20 +74,23 @@ export class CameraStore {
 
 
 
-  pushShot(uri: string) {
-
-    if (!uri) return;
-
-    const exists = this.recent.some(s => s.uri === uri);
-
-    if (exists) return;
-
+  pushLocal(payload: { uri: string; bakedUri?: string; look?: Look; tint?: string; alpha?: number; createdAt?: number }) {
+    const { uri, bakedUri, look, tint, alpha, createdAt } = payload;
+    if (!uri) return null;
+    const exists = this.recent.some(s => s.uri === uri && (!bakedUri || s.bakedUri === bakedUri));
+    if (exists) return null;
     const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-
-    // keep last 100
-
-    this.recent = [{ id, uri }, ...this.recent].slice(0, 100);
-
+    const shot: Shot = {
+      id,
+      uri,
+      bakedUri,
+      look,
+      tint,
+      alpha,
+      createdAt: createdAt ?? Date.now(),
+    };
+    this.recent = [shot, ...this.recent].slice(0, 100);
+    return shot;
   }
 
 
@@ -95,7 +106,7 @@ export class CameraStore {
   clearShots() { this.recent = []; }
 
   removeLocalByUri = async (uri: string) => {
-    this.recent = this.recent.filter(it => it.uri !== uri);
+    this.recent = this.recent.filter(it => it.uri !== uri && it.bakedUri !== uri);
     // Persistence is handled automatically by makePersistable
   };
 

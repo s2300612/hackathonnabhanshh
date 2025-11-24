@@ -64,6 +64,7 @@ function ProtectedTabs() {
       <Tabs.Screen name="camera-settings" options={{ href: null }} />
       <Tabs.Screen name="process" options={{ href: null }} />
       <Tabs.Screen name="photo" options={{ href: null }} />
+      <Tabs.Screen name="viewer" options={{ href: null }} />
     </Tabs>
   );
 }

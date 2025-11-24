@@ -11,7 +11,13 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 
-type Shot = { id: string; uri: string; picked?: boolean };
+type ShotItem = {
+  id: string;
+  uri: string;
+  bakedUri?: string;
+  local?: boolean;
+  originalUri?: string;
+};
 const LONG_PRESS_HINT_KEY = "album.longpress.hint.v1";
 
 function AlbumScreenImpl() {
@@ -21,7 +27,7 @@ function AlbumScreenImpl() {
   React.useEffect(() => {
     if (!auth.signedIn) router.replace("/login");
   }, [auth.signedIn, router]);
-  const [items, setItems] = useState<Shot[]>([]);
+  const [items, setItems] = useState<ShotItem[]>([]);
   const [canRead, setCanRead] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [showHint, setShowHint] = useState(false);
@@ -79,11 +85,11 @@ function AlbumScreenImpl() {
 
       if (res.canceled) return;
 
-      const picked: Shot[] = (res.assets ?? [])
+      const picked: ShotItem[] = (res.assets ?? [])
         .map((a, idx) => ({
           id: (a.assetId ?? a.uri ?? `picked-${Date.now()}-${idx}`).toString(),
           uri: a.uri.toString(),
-          picked: true,
+          bakedUri: a.uri.toString(),
         }))
         .filter(x => !!x.uri);
 
@@ -147,30 +153,50 @@ function AlbumScreenImpl() {
 
   // Combine MediaLibrary items with MobX recent shots as additional fallback
   const allShots = useMemo(() => {
-    const seen = new Set<string>();
-    const combined: Shot[] = [];
-    
-    // Add MediaLibrary items first (preferred)
-    items.forEach(item => {
-      if (!seen.has(item.uri)) {
-        seen.add(item.uri);
-        combined.push(item);
-      }
+    const map = new Map<string, ShotItem>();
+
+    (camera.recent ?? []).forEach((item) => {
+      const key = String(item.bakedUri ?? item.uri ?? item.id);
+      if (!key) return;
+      map.set(key, {
+        id: item.id,
+        uri: item.bakedUri ?? item.uri,
+        bakedUri: item.bakedUri ?? item.uri,
+        originalUri: item.uri,
+        local: true,
+      });
     });
-    
-    // Add MobX recent shots that aren't already included
-    camera.recent.forEach(item => {
-      if (!seen.has(item.uri)) {
-        seen.add(item.uri);
-        combined.push({ id: item.id, uri: item.uri });
-      }
+
+    items.forEach((item) => {
+      const key = String(item.uri ?? item.id);
+      if (!key || map.has(key)) return;
+      map.set(key, {
+        id: item.id,
+        uri: item.bakedUri ?? item.uri,
+        bakedUri: item.bakedUri ?? item.uri,
+        originalUri: item.uri,
+        local: false,
+      });
     });
-    
-    return combined;
+
+    return Array.from(map.values());
   }, [items, camera.recent]);
 
-  const openEditor = (shot: Shot) => {
-    router.push({ pathname: "/(app)/photo", params: { uri: shot.uri } });
+  const openViewer = (shot: ShotItem) => {
+    if (shot.local) {
+      router.push({ pathname: "/(app)/viewer", params: { id: String(shot.id) } });
+    } else {
+      router.push({ pathname: "/(app)/viewer", params: { uri: shot.uri } });
+    }
+  };
+
+  const openEditor = (shot: ShotItem) => {
+    router.push({
+      pathname: "/(app)/photo",
+      params: {
+        sourceUri: shot.originalUri ?? shot.uri,
+      },
+    });
   };
 
   return (
@@ -249,48 +275,46 @@ function AlbumScreenImpl() {
               </Text>
             ) : null
           }
-          renderItem={({ item }) => {
-            const isLocal = camera.recent.some(r => r.uri === item.uri);
-            return (
-              <Pressable
-                onPress={() => openEditor(item)}
-                style={{ width: "31%", aspectRatio: 1, borderRadius: 8, overflow: "hidden" }}
-              >
-                <Image
-                  source={{ uri: String(item.uri) }}
-                  style={{ width: "100%", height: "100%", backgroundColor: "#ddd" }}
-                />
-                {isLocal && (
-                  <Pressable
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    onLongPress={async () => {
-                      await Haptics.selectionAsync().catch(() => undefined);
-                      Alert.alert("Delete", "Remove this image?", [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: async () => {
-                            await camera.removeLocalByUri(item.uri);
-                          },
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => openViewer(item)}
+              onLongPress={() => openEditor(item)}
+              style={{ width: "31%", aspectRatio: 1, borderRadius: 8, overflow: "hidden" }}
+            >
+              <Image
+                source={{ uri: String(item.bakedUri ?? item.uri) }}
+                style={{ width: "100%", height: "100%", backgroundColor: "#ddd" }}
+              />
+              {item.local && (
+                <Pressable
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  onLongPress={async () => {
+                    await Haptics.selectionAsync().catch(() => undefined);
+                    Alert.alert("Delete", "Remove this image?", [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                          camera.removeShot(item.id);
                         },
-                      ]);
-                    }}
-                    style={{
-                      position: "absolute",
-                      top: 6,
-                      right: 6,
-                      backgroundColor: "rgba(0,0,0,0.6)",
-                      padding: 6,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#fff" />
-                  </Pressable>
-                )}
-              </Pressable>
-            );
-          }}
+                      },
+                    ]);
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    padding: 6,
+                    borderRadius: 12,
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#fff" />
+                </Pressable>
+              )}
+            </Pressable>
+          )}
           ListEmptyComponent={
             <Text style={{ marginTop: 12, opacity: 0.75, padding: 16 }}>
               {loading ? "Loading…" : "No photos yet. Use Pick from Gallery or capture photos in Camera+."}

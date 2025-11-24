@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { View, Text, Alert, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
+import { View, Text, Alert, ScrollView, Pressable, StyleSheet, Linking, Dimensions } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
 import { observer } from "mobx-react-lite";
@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "expo-router";
 import { TINT_SWATCHES, Hex, hexToRgba } from "@/lib/tint";
 import { useStores } from "@/stores";
-import { Compositor, CompositorHandle } from "@/lib/Compositor";
 import * as Haptics from "expo-haptics";
 import { pushFallback } from "@/lib/camera-permissions";
+import ViewShot, { captureRef } from "react-native-view-shot";
+import OffscreenComposer from "@/components/OffscreenComposer";
 
 function CameraAdvancedImpl() {
   const [camPerm, requestCamPerm] = useCameraPermissions();
@@ -35,7 +36,10 @@ function CameraAdvancedImpl() {
   }, [camPerm?.status, requestCamPerm]);
   const router = useRouter();
   const { auth, camera } = useStores();
-  const compositorRef = useRef<CompositorHandle>(null);
+  const bakeRef = useRef<ViewShot>(null);
+  const [rawUri, setRawUri] = useState<string | null>(null);
+  const composerWidth = Math.round(Dimensions.get("window").width);
+  const composerHeight = Math.round(composerWidth * 4 / 3);
 
   const look = camera.look;
   const tint = camera.tint as Hex;
@@ -62,22 +66,31 @@ function CameraAdvancedImpl() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
       const pic = await camRef.current.takePictureAsync({ quality: 0.9, skipProcessing: true });
       if (!pic?.uri) return;
+      setRawUri(pic.uri);
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      let finalUri = pic.uri;
-
-      if (look !== "none" && compositorRef.current) {
-        finalUri = await compositorRef.current.compose({
-          uri: pic.uri,
-          look,
-          tint,
-          tintAlpha,
-          nightAlpha,
-          thermalAlpha,
-        });
+      let bakedUri = pic.uri;
+      if (look !== "none" && bakeRef.current) {
+        try {
+          const captured = await captureRef(bakeRef, { format: "jpg", quality: 0.92 });
+          if (captured) bakedUri = captured;
+        } catch (err) {
+          console.warn("ViewShot capture failed", err);
+        }
       }
 
-      await pushFallback(finalUri);
-      router.push({ pathname: "/(app)/photo", params: { uri: finalUri } });
+      const shot = await pushFallback({
+        uri: pic.uri,
+        bakedUri,
+        look,
+        tint,
+        alpha: look === "tint" ? tintAlpha : look === "night" ? nightAlpha : look === "thermal" ? thermalAlpha : undefined,
+      });
+      if (shot?.id) {
+        router.replace({ pathname: "/(app)/viewer", params: { id: String(shot.id) } });
+      } else {
+        router.replace({ pathname: "/(app)/viewer", params: { uri: bakedUri } });
+      }
     } catch (e: any) {
       Alert.alert("Capture error", String(e?.message ?? e));
     }
@@ -189,7 +202,26 @@ function CameraAdvancedImpl() {
           </Pressable>
         </View>
       </View>
-      <Compositor ref={compositorRef} />
+      <View style={{ position: "absolute", left: -9999, top: -9999 }}>
+        <ViewShot ref={bakeRef}>
+          <OffscreenComposer
+            uri={rawUri ?? ""}
+            look={look}
+            tintHex={tint}
+            alpha={
+              look === "tint"
+                ? tintAlpha
+                : look === "night"
+                ? nightAlpha
+                : look === "thermal"
+                ? thermalAlpha
+                : 0
+            }
+            width={composerWidth}
+            height={composerHeight}
+          />
+        </ViewShot>
+      </View>
     </View>
   );
 }

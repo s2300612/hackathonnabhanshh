@@ -4,6 +4,7 @@ import * as MediaLibrary from "expo-media-library";
 
 import { Camera, PermissionResponse } from "expo-camera";
 import { cameraStore } from "@/stores";
+import type { Look } from "@/stores/camera-store";
 
 
 
@@ -90,10 +91,20 @@ export async function getMediaPermission(): Promise<MediaPerm> {
 export const ALBUM = "NabhanCamera";
 export const STORAGE_CAMERA_PREFS = "camera.prefs.v1";
 
-export async function pushFallback(uri: string) {
+type FallbackPayload = {
+  uri: string;
+  bakedUri?: string;
+  look?: Look;
+  tint?: string;
+  alpha?: number;
+  createdAt?: number;
+};
+
+export async function pushFallback(payload: FallbackPayload) {
   try {
-    cameraStore.pushShot(uri);
+    return cameraStore.pushLocal(payload);
   } catch (e) {
     console.warn("pushFallback error", e);
+    return null;
   }
 }
