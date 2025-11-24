@@ -27,6 +27,24 @@ export default function DetailsImpl() {
       <Text style={{ marginTop: 8, color: "#2563eb" }} onPress={() => Linking.openURL("https://gitlab.uwe.ac.uk/an3-aboobakuru/mobiledev3rdnov")}>
         Project README
       </Text>
+      
+      <View style={{ marginTop: 24, padding: 12, backgroundColor: "#fef3c7", borderRadius: 8, borderWidth: 1, borderColor: "#fbbf24" }}>
+        <Text style={{ fontSize: 16, fontWeight: "700", marginBottom: 8, color: "#92400e" }}>
+          Known Expo Go Limitations
+        </Text>
+        <Text style={{ color: "#78350f", lineHeight: 20 }}>
+          • On Android, read access to the photo library may be limited in Expo Go due to manifest constraints.
+        </Text>
+        <Text style={{ color: "#78350f", lineHeight: 20, marginTop: 4 }}>
+          • Album reading requires full Photos permission, which may not be available in Expo Go on Android 13+.
+        </Text>
+        <Text style={{ color: "#78350f", lineHeight: 20, marginTop: 4 }}>
+          • Exporting photos still works (write permission), but organizing into albums requires read access.
+        </Text>
+        <Text style={{ color: "#78350f", lineHeight: 20, marginTop: 4 }}>
+          • For full functionality, use a development build or standalone app instead of Expo Go.
+        </Text>
+      </View>
     </ScrollView>
   );
 }

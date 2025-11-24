@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import * as MediaLibrary from "expo-media-library";
 
 import { Camera, PermissionResponse } from "expo-camera";
+import { cameraStore } from "@/stores";
 
 
 
@@ -88,3 +89,11 @@ export async function getMediaPermission(): Promise<MediaPerm> {
 
 export const ALBUM = "NabhanCamera";
 export const STORAGE_CAMERA_PREFS = "camera.prefs.v1";
+
+export async function pushFallback(uri: string) {
+  try {
+    cameraStore.pushShot(uri);
+  } catch (e) {
+    console.warn("pushFallback error", e);
+  }
+}

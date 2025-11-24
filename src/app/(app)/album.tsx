@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { useStores } from "@/stores";
 import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 
 type Shot = { id: string; uri: string; picked?: boolean };
+const LONG_PRESS_HINT_KEY = "album.longpress.hint.v1";
 
 function AlbumScreenImpl() {
   const router = useRouter();
@@ -21,6 +24,7 @@ function AlbumScreenImpl() {
   const [items, setItems] = useState<Shot[]>([]);
   const [canRead, setCanRead] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showHint, setShowHint] = useState(false);
 
   const load = useCallback(async (hasRead: boolean) => {
     setLoading(true);
@@ -127,6 +131,20 @@ function AlbumScreenImpl() {
     })();
   }, [load]);
 
+  useEffect(() => {
+    (async () => {
+      const seen = await AsyncStorage.getItem(LONG_PRESS_HINT_KEY);
+      if (!seen) {
+        setShowHint(true);
+      }
+    })();
+  }, []);
+
+  const dismissHint = useCallback(async () => {
+    setShowHint(false);
+    await AsyncStorage.setItem(LONG_PRESS_HINT_KEY, "seen");
+  }, []);
+
   // Combine MediaLibrary items with MobX recent shots as additional fallback
   const allShots = useMemo(() => {
     const seen = new Set<string>();
@@ -159,6 +177,24 @@ function AlbumScreenImpl() {
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1, padding: 12 }}>
         <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 8 }}>Album</Text>
+
+        {showHint && (
+          <Pressable
+            onPress={dismissHint}
+            style={{
+              backgroundColor: "#fef3c7",
+              borderColor: "#fcd34d",
+              borderWidth: 1,
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 12,
+            }}
+          >
+            <Text style={{ color: "#92400e", fontWeight: "700" }}>Tip</Text>
+            <Text style={{ color: "#92400e", marginTop: 4 }}>Press & hold a local tile to delete it.</Text>
+            <Text style={{ color: "#92400e", marginTop: 8, fontSize: 12 }}>Tap to dismiss</Text>
+          </Pressable>
+        )}
 
         {!canRead && (
           <View style={{ gap: 8, marginBottom: 12 }}>
@@ -226,7 +262,9 @@ function AlbumScreenImpl() {
                 />
                 {isLocal && (
                   <Pressable
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     onLongPress={async () => {
+                      await Haptics.selectionAsync().catch(() => undefined);
                       Alert.alert("Delete", "Remove this image?", [
                         { text: "Cancel", style: "cancel" },
                         {

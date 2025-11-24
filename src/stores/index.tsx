@@ -19,4 +19,4 @@ export const useStores = () => useContext(StoresContext);
 export type { EditEntry, HistoryItem, EffectKind } from "./history-store";
 
 // Re-export auth utilities
-export { authStore, useAuth };
+export { authStore, useAuth, cameraStore };

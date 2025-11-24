@@ -10,6 +10,7 @@ export class AuthStore {
   email: string | null = null;
   loading = false;
   error: string | null = null;
+  hydrated = false; // Track if session has been loaded
 
   constructor() {
     makeAutoObservable(this);
@@ -23,25 +24,26 @@ export class AuthStore {
         this.error = null;
       });
 
-      // Load users map
-      const usersRaw = await AsyncStorage.getItem(USERS_KEY);
-      // Users map is stored but we don't need to load it into memory
-      // We'll read it on-demand during login/register
-
       // Load session
       const sessionRaw = await AsyncStorage.getItem(SESSION_KEY);
       if (sessionRaw) {
         const session = JSON.parse(sessionRaw) as { email: string };
         // Verify the user still exists
-        const usersRaw2 = await AsyncStorage.getItem(USERS_KEY);
-        if (usersRaw2) {
-          const users = JSON.parse(usersRaw2) as Record<string, string>;
+        const usersRaw = await AsyncStorage.getItem(USERS_KEY);
+        if (usersRaw) {
+          const users = JSON.parse(usersRaw) as Record<string, string>;
           if (users[session.email]) {
             runInAction(() => {
               this.signedIn = true;
               this.email = session.email;
             });
+          } else {
+            // Session exists but user doesn't - clear invalid session
+            await AsyncStorage.removeItem(SESSION_KEY);
           }
+        } else {
+          // No users but session exists - clear invalid session
+          await AsyncStorage.removeItem(SESSION_KEY);
         }
       }
     } catch (e: any) {
@@ -51,6 +53,7 @@ export class AuthStore {
     } finally {
       runInAction(() => {
         this.loading = false;
+        this.hydrated = true; // Mark as hydrated after init completes
       });
     }
   }
@@ -138,6 +141,12 @@ export class AuthStore {
     runInAction(() => {
       this.signedIn = false;
       this.email = null;
+      this.error = null;
+    });
+  }
+
+  clearError(): void {
+    runInAction(() => {
       this.error = null;
     });
   }

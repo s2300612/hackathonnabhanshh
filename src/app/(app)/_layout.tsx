@@ -2,10 +2,20 @@
 import React from "react";
 import { Tabs, Redirect } from "expo-router";
 import { observer } from "mobx-react-lite";
+import { View, ActivityIndicator } from "react-native";
 import { authStore } from "@/stores/auth-store";
 import { Ionicons } from "@expo/vector-icons";
 
 function ProtectedTabs() {
+  // Wait for hydration before checking auth status
+  if (!authStore.hydrated) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   // If not signed in, redirect to login
   if (!authStore.signedIn) {
     return <Redirect href="/login" />;

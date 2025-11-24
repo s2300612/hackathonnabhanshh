@@ -11,6 +11,17 @@ function LoginImpl() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Clear error when user types
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (auth.error) auth.clearError();
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (auth.error) auth.clearError();
+  };
+
   const isValid = auth.isValidEmail(email) && password.length >= 6 && !auth.loading;
 
   const handleLogin = async () => {
@@ -37,7 +48,7 @@ function LoginImpl() {
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
             style={{
               borderWidth: 1,
               borderColor: "#ddd",
@@ -52,16 +63,21 @@ function LoginImpl() {
             placeholder="Password"
             secureTextEntry
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             style={{
               borderWidth: 1,
               borderColor: "#ddd",
               borderRadius: 8,
               padding: 12,
-              marginBottom: 12,
+              marginBottom: 4,
               backgroundColor: "#fff",
             }}
           />
+          {password.length > 0 && password.length < 6 && (
+            <Text style={{ color: "#ef4444", marginBottom: 12, fontSize: 12, marginLeft: 4 }}>
+              Password must be at least 6 characters
+            </Text>
+          )}
 
           {auth.error && (
             <Text style={{ color: "#ef4444", marginBottom: 12, fontSize: 14 }}>{auth.error}</Text>

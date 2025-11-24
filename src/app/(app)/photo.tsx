@@ -20,6 +20,8 @@ import { withTimeout } from "@/lib/promise-timeout";
 
 import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
 
+import { showMessage } from "react-native-flash-message";
+
 
 
 // --- Helpers (kept local so nothing odd gets spread into JSX) ---
@@ -258,21 +260,31 @@ function PhotoEditorImpl() {
         history.markExported(currentEditId, asset.uri);
       }
 
-
-
-      Alert.alert("Exported", "Saved a copy to your gallery.");
+      // Show success message
+      const albumMsg = canRead ? ` and added to ${ALBUM} album` : "";
+      showMessage({
+        message: "Exported successfully",
+        description: `Saved to gallery${albumMsg}`,
+        type: "success",
+        duration: 3000,
+      });
       
       // Navigate back after successful export
       router.replace("/(app)/album");
 
     } catch (e: any) {
-
-      Alert.alert("Export failed", String(e?.message ?? e));
+      const errorMsg = String(e?.message ?? e);
+      showMessage({
+        message: "Export failed",
+        description: errorMsg,
+        type: "danger",
+        duration: 4000,
+      });
+      Alert.alert("Export failed", errorMsg);
 
     } finally {
-
+      // Always reset exporting state, even if error occurred
       setExporting(false);
-
     }
 
   }, [uri, exporting, editId, look, strength, tint, history, router]);

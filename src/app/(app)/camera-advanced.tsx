@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Alert, ScrollView, Pressable, StyleSheet } from "react-native";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { View, Text, Alert, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
 import { observer } from "mobx-react-lite";
@@ -7,11 +7,41 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "expo-router";
 import { TINT_SWATCHES, Hex, hexToRgba } from "@/lib/tint";
 import { useStores } from "@/stores";
+import { Compositor, CompositorHandle } from "@/lib/Compositor";
+import * as Haptics from "expo-haptics";
+import { pushFallback } from "@/lib/camera-permissions";
 
 function CameraAdvancedImpl() {
   const [camPerm, requestCamPerm] = useCameraPermissions();
+
+  const handleGrantCamera = useCallback(async () => {
+    try {
+      const res = await requestCamPerm();
+      if (!res.granted && res.canAskAgain === false) {
+        Alert.alert("Permission required", "Camera access is blocked. Open system settings to allow it.", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Open Settings", onPress: () => Linking.openSettings?.() },
+        ]);
+      }
+    } catch (e) {
+      Alert.alert("Error", String((e as Error).message ?? e));
+    }
+  }, [requestCamPerm]);
+
+  useEffect(() => {
+    if (camPerm?.status === "undetermined") {
+      requestCamPerm();
+    }
+  }, [camPerm?.status, requestCamPerm]);
   const router = useRouter();
   const { auth, camera } = useStores();
+  const compositorRef = useRef<CompositorHandle>(null);
+
+  const look = camera.look;
+  const tint = camera.tint as Hex;
+  const tintAlpha = camera.tintAlpha;
+  const nightAlpha = camera.night;
+  const thermalAlpha = camera.thermal;
 
   React.useEffect(() => {
     if (!auth.signedIn) router.replace("/login");
@@ -22,27 +52,36 @@ function CameraAdvancedImpl() {
 
   const camRef = useRef<CameraView | null>(null);
 
-  useEffect(() => {
-    if (!camPerm?.granted) {
-      requestCamPerm();
-    }
-  }, [camPerm, requestCamPerm]);
-
   const cycleFlash = () => {
     setFlash((prev) => (prev === "off" ? "on" : prev === "on" ? "auto" : "off"));
   };
 
-  const takePhoto = async () => {
+  const takePhoto = useCallback(async () => {
     if (!camRef.current) return;
     try {
-      const pic = await camRef.current.takePictureAsync({ quality: 0.8, skipProcessing: true });
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+      const pic = await camRef.current.takePictureAsync({ quality: 0.9, skipProcessing: true });
       if (!pic?.uri) return;
-      camera.pushShot(pic.uri);
-      router.push({ pathname: "/(app)/photo", params: { uri: pic.uri } });
+
+      let finalUri = pic.uri;
+
+      if (look !== "none" && compositorRef.current) {
+        finalUri = await compositorRef.current.compose({
+          uri: pic.uri,
+          look,
+          tint,
+          tintAlpha,
+          nightAlpha,
+          thermalAlpha,
+        });
+      }
+
+      await pushFallback(finalUri);
+      router.push({ pathname: "/(app)/photo", params: { uri: finalUri } });
     } catch (e: any) {
       Alert.alert("Capture error", String(e?.message ?? e));
     }
-  };
+  }, [look, tint, tintAlpha, nightAlpha, thermalAlpha, router]);
 
   if (!camPerm) {
     return (
@@ -55,7 +94,12 @@ function CameraAdvancedImpl() {
     return (
       <View style={{ flex: 1, padding: 16, gap: 12 }}>
         <Text style={{ fontSize: 18, fontWeight: "600" }}>Camera permission required</Text>
-        <Button label="Grant Permission" onPress={requestCamPerm} fullWidth={false} />
+        <Pressable onPress={handleGrantCamera} style={styles.grantBtn}>
+          <Text style={styles.grantText}>Grant Permission</Text>
+        </Pressable>
+        {camPerm?.canAskAgain === false && (
+          <Text style={{ color: "#ef4444" }}>Permission is blocked. Tap above to open system settings.</Text>
+        )}
       </View>
     );
   }
@@ -145,9 +189,20 @@ function CameraAdvancedImpl() {
           </Pressable>
         </View>
       </View>
+      <Compositor ref={compositorRef} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  grantBtn: {
+    backgroundColor: "#000",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  grantText: { color: "#fff", fontWeight: "600" },
+});
 
 export default observer(CameraAdvancedImpl);
 
