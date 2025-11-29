@@ -26,16 +26,16 @@ function Providers({ children }: { children: React.ReactNode }) {
   return (
     <GestureHandlerRootView style={styles.container}>
       <StatusBar style="dark" />
-      <ThemeContext.Provider value={{ dark: isDark }}>
-        <ThemeProvider value={navigationTheme}>
-          <APIProvider>
-            <BottomSheetModalProvider>
-              {children}
-              <FlashMessage position="top" />
-            </BottomSheetModalProvider>
-          </APIProvider>
-        </ThemeProvider>
-      </ThemeContext.Provider>
+        <ThemeContext.Provider value={{ dark: isDark }}>
+          <ThemeProvider value={navigationTheme}>
+            <APIProvider>
+              <BottomSheetModalProvider>
+                {children}
+                <FlashMessage position="top" />
+              </BottomSheetModalProvider>
+            </APIProvider>
+          </ThemeProvider>
+        </ThemeContext.Provider>
     </GestureHandlerRootView>
   );
 }
@@ -55,11 +55,11 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StoresProvider>
-        <Providers>
-          <Gate>
+    <Providers>
+      <Gate>
             <Slot />
-          </Gate>
-        </Providers>
+      </Gate>
+    </Providers>
       </StoresProvider>
     </SafeAreaProvider>
   );

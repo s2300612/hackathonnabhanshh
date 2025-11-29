@@ -12,6 +12,12 @@ import { pushFallback } from "@/lib/camera-permissions";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import OffscreenComposer from "@/components/OffscreenComposer";
 import { persistTemp } from "@/lib/fs";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+
+const HEADER_H = 52;   // white app bar height
+const DIVIDER_H = 4;   // dark strip height under the bar
 
 function CameraAdvancedImpl() {
   const [camPerm, requestCamPerm] = useCameraPermissions();
@@ -143,6 +149,8 @@ function CameraAdvancedImpl() {
     }
   }, [look, tint, tintAlpha, nightAlpha, thermalAlpha, router]);
 
+  const insets = useSafeAreaInsets();
+
   if (!camPerm) return <View style={styles.center}><Text>Checking camera…</Text></View>;
   if (!camPerm.granted) {
     return (
@@ -155,10 +163,22 @@ function CameraAdvancedImpl() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <View style={{ flex: 1 }}>
-        <CameraView ref={(r) => (camRef.current = r)} facing={type} flash={flash} enableZoomGesture style={{ flex: 1 }} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
+      <StatusBar style="dark" backgroundColor="#fff" />
 
+      {/* White App Bar */}
+      <View style={{ height: HEADER_H, justifyContent: "center", paddingHorizontal: 16, backgroundColor: "#fff" }}>
+        <Text style={{ fontSize: 22, fontWeight: "700", color: "#111" }}>Camera+</Text>
+      </View>
+
+      {/* Dark divider below the bar */}
+      <View style={{ height: DIVIDER_H, backgroundColor: "#0d2a55" }} />
+
+      {/* Camera preview area */}
+      <View style={{ flex: 1, backgroundColor: "#0d2a55" }}>
+        <CameraView ref={camRef} facing={type} flash={flash} style={{ flex: 1 }} />
+
+        {/* Overlays – keep exactly as you had */}
         {camera.look === "tint" && (
           <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: hexToRgba(camera.tint as Hex, camera.tintAlpha) }]} />
         )}
@@ -169,11 +189,29 @@ function CameraAdvancedImpl() {
           <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", `rgba(255,0,0,${camera.thermal})`, `rgba(255,255,0,${camera.thermal})`]} style={StyleSheet.absoluteFillObject} />
         )}
 
-        <View style={[StyleSheet.absoluteFillObject, { padding: 16 }]} pointerEvents="box-none">
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Button label={type === "back" ? "Front" : "Back"} size="sm" onPress={() => setType(type === "back" ? "front" : "back")} fullWidth={false} />
-            <Button label={flash === "off" ? "Flash Off" : flash === "on" ? "Flash On" : "Flash Auto"} size="sm" onPress={cycleFlash} fullWidth={false} />
-          </View>
+        {/* Top buttons row, just under the divider */}
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: "absolute",
+            top: HEADER_H + DIVIDER_H + 8,
+            left: 16,
+            right: 16,
+            flexDirection: "row",
+            gap: 10,
+          }}
+        >
+          <Pressable onPress={() => setType(type === "back" ? "front" : "back")} style={topBtnStyle}>
+            <Ionicons name={type === "back" ? "camera-reverse-outline" : "camera-outline"} size={18} color="#fff" />
+            <Text style={topBtnText}>{type === "back" ? " Front" : " Back"}</Text>
+          </Pressable>
+
+          <Pressable onPress={cycleFlash} style={topBtnStyle}>
+            <Ionicons name={flash === "off" ? "flash-off-outline" : "flash-outline"} size={18} color="#fff" />
+            <Text style={topBtnText}>
+              {flash === "off" ? " Flash Off" : flash === "on" ? " Flash On" : " Flash Auto"}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -233,7 +271,7 @@ function CameraAdvancedImpl() {
         </ViewShot>
       </View>
 
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -242,5 +280,24 @@ const styles = StyleSheet.create({
   grantText: { color: "#fff", fontWeight: "600" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
 });
+
+const topBtnStyle = {
+  flexDirection: "row" as const,
+  alignItems: "center" as const,
+  gap: 6,
+  backgroundColor: "rgba(0,0,0,0.85)",
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 10,
+  borderWidth: 1,          // white border for contrast
+  borderColor: "#fff",
+  elevation: 3,
+  shadowColor: "#000",
+  shadowOpacity: 0.25,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+};
+
+const topBtnText = { color: "#fff", fontWeight: "700" as const, fontSize: 14 };
 
 export default observer(CameraAdvancedImpl);

@@ -2,7 +2,7 @@
 import "react-native-get-random-values";
 import { makeAutoObservable, computed, runInAction } from "mobx";
 import { makePersistable } from "mobx-persist-store";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { safeStorage } from "@/lib/safe-storage";
 import { v4 as uuid } from "uuid";
 
 export type EffectKind = "none" | "night" | "thermal" | "tint";
@@ -32,7 +32,7 @@ export class HistoryStore {
     makePersistable(this, {
       name: "HistoryStore",
       properties: ["recentEdits", "filter", "sort"],
-      storage: AsyncStorage,
+      storage: safeStorage,
       stringify: true,
     });
   }
@@ -66,23 +66,6 @@ export class HistoryStore {
   addDraft(entryLike: Omit<EditEntry, "id" | "status" | "createdAt" | "updatedAt">): EditEntry {
     const now = Date.now();
     const id = uuid();
-    
-    // De-dupe: check if same sourceUri + effect + createdAt bucket (within 1 second)
-    const bucket = Math.floor(now / 1000);
-    const duplicate = this.recentEdits.find(
-      (e) =>
-        e.sourceUri === entryLike.sourceUri &&
-        e.effect === entryLike.effect &&
-        Math.floor(e.createdAt / 1000) === bucket
-    );
-
-    if (duplicate) {
-      // Update existing instead of creating duplicate
-      duplicate.strength = entryLike.strength;
-      duplicate.tintHex = entryLike.tintHex;
-      duplicate.updatedAt = now;
-      return duplicate;
-    }
 
     const entry: EditEntry = {
       id,
@@ -92,8 +75,20 @@ export class HistoryStore {
       updatedAt: now,
     };
 
+    // Always create a new entry - don't de-dupe (user might want multiple edits of the same image)
     this.recentEdits = [entry, ...this.recentEdits].slice(0, cap);
     return entry;
+  }
+
+  updateDraft(id: string, updates: Partial<Omit<EditEntry, "id" | "status" | "createdAt" | "updatedAt">>) {
+    const entry = this.recentEdits.find((e) => e.id === id);
+    if (entry && entry.status === "draft") {
+      if (updates.effect !== undefined) entry.effect = updates.effect;
+      if (updates.tintHex !== undefined) entry.tintHex = updates.tintHex;
+      if (updates.strength !== undefined) entry.strength = updates.strength;
+      if (updates.sourceUri !== undefined) entry.sourceUri = updates.sourceUri;
+      entry.updatedAt = Date.now();
+    }
   }
 
   markExported(id: string, exportedUri: string) {

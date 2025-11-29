@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, FlatList, Image, Alert, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
@@ -9,14 +9,34 @@ import { formatDate } from "@/lib/date";
 import * as MediaLibrary from "expo-media-library";
 import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
 
+const ITEMS_PER_PAGE = 10;
+
 function HistoryScreenImpl() {
   const router = useRouter();
   const { auth, history, camera } = useStores();
+  const [page, setPage] = useState(1);
 
   React.useEffect(() => {
     if (!auth.signedIn) router.replace("/login");
   }, [auth.signedIn, router]);
-  const data = useMemo(() => history?.filteredSortedEdits ?? [], [history?.filteredSortedEdits]);
+  
+  const allData = useMemo(() => history?.filteredSortedEdits ?? [], [history?.filteredSortedEdits]);
+  
+  // Pagination: show only 10 items per page
+  const data = useMemo(() => {
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return allData.slice(startIndex, endIndex);
+  }, [allData, page]);
+  
+  const totalPages = Math.ceil(allData.length / ITEMS_PER_PAGE);
+  const hasMore = page < totalPages;
+  const hasPrevious = page > 1;
+  
+  // Reset to page 1 when filter or sort changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [history?.filter, history?.sort]);
 
   const clear = () =>
     Alert.alert("Clear history", "Remove all edited photos from history?", [
@@ -122,7 +142,7 @@ function HistoryScreenImpl() {
         </Pressable>
       </View>
 
-      {data.length === 0 ? (
+      {allData.length === 0 ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 16 }}>
           <Text style={{ opacity: 0.75, fontSize: 16, marginBottom: 8 }}>No edited photos yet.</Text>
           <Button label="Go to Camera+" onPress={() => router.push("/(app)/camera-advanced")} size="sm" />
@@ -132,7 +152,7 @@ function HistoryScreenImpl() {
           <FlatList
             data={data}
             keyExtractor={(i) => String(i.id)}
-            contentContainerStyle={{ padding: 12, gap: 12, paddingBottom: 80 }}
+            contentContainerStyle={{ padding: 12, gap: 12, paddingBottom: 100 }}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             renderItem={({ item }) => {
               const effectName = item.effect === "none" ? "Original" : item.effect.charAt(0).toUpperCase() + item.effect.slice(1);
@@ -164,7 +184,11 @@ function HistoryScreenImpl() {
                     <Text style={styles.uriText} numberOfLines={1} ellipsizeMode="middle">
                       {item.exportedUri ?? item.sourceUri}
                     </Text>
-                    <View style={styles.actionsRow}>
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.actionsRow}
+                    >
                       {item.status === "draft" ? (
                         <>
                           <Button
@@ -194,12 +218,38 @@ function HistoryScreenImpl() {
                       <Pressable onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
                         <Text style={styles.deleteText}>Delete</Text>
                       </Pressable>
-                    </View>
+                    </ScrollView>
                   </View>
                 </Pressable>
               );
             }}
           />
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <View style={styles.paginationContainer}>
+              <Pressable
+                onPress={() => setPage(p => Math.max(1, p - 1))}
+                disabled={!hasPrevious}
+                style={[styles.paginationButton, !hasPrevious && styles.paginationButtonDisabled]}
+              >
+                <Text style={[styles.paginationText, !hasPrevious && styles.paginationTextDisabled]}>
+                  Previous
+                </Text>
+              </Pressable>
+              <Text style={styles.paginationInfo}>
+                Page {page} of {totalPages}
+              </Text>
+              <Pressable
+                onPress={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={!hasMore}
+                style={[styles.paginationButton, !hasMore && styles.paginationButtonDisabled]}
+              >
+                <Text style={[styles.paginationText, !hasMore && styles.paginationTextDisabled]}>
+                  Next
+                </Text>
+              </Pressable>
+            </View>
+          )}
           <View style={styles.clearButtonContainer}>
             <Pressable onPress={clear} style={styles.clearButton}>
               <Text style={styles.clearButtonText}>Clear history</Text>
@@ -314,6 +364,40 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 16,
+  },
+  paginationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    backgroundColor: "#fff",
+  },
+  paginationButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: "#000",
+    minWidth: 80,
+    alignItems: "center",
+  },
+  paginationButtonDisabled: {
+    backgroundColor: "#e5e7eb",
+  },
+  paginationText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  paginationTextDisabled: {
+    color: "#9ca3af",
+  },
+  paginationInfo: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#666",
   },
 });
 

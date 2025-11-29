@@ -3,8 +3,7 @@ import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Scrol
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, Link } from "expo-router";
 import { observer } from "mobx-react-lite";
-import { runInAction } from "mobx";
-import { useAuth, authStore } from "@/stores/auth-store";
+import { useAuth } from "@/stores/auth-store";
 
 function RegisterImpl() {
   const auth = useAuth();
@@ -35,15 +34,6 @@ function RegisterImpl() {
     }
   };
 
-  const handleGuest = () => {
-    // Set a guest session flag (simple bypass for demo)
-    // Use runInAction to ensure MobX reactivity
-    runInAction(() => {
-      authStore.signedIn = true;
-      authStore.email = "guest@demo.local";
-    });
-    router.replace("/(app)/camera-advanced");
-  };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -111,7 +101,7 @@ function RegisterImpl() {
             </Text>
           </Pressable>
 
-          <View style={{ flexDirection: "row", justifyContent: "center", gap: 4, marginBottom: 12 }}>
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>
             <Text>Already have an account? </Text>
             <Link href="/login" asChild>
               <Pressable>
@@ -119,19 +109,6 @@ function RegisterImpl() {
               </Pressable>
             </Link>
           </View>
-
-          <Pressable
-            onPress={handleGuest}
-            style={{
-              backgroundColor: "#f3f4f6",
-              padding: 14,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: "#d1d5db",
-            }}
-          >
-            <Text style={{ color: "#374151", textAlign: "center", fontWeight: "600" }}>Continue as guest</Text>
-          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

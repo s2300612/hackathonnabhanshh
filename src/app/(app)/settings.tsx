@@ -181,16 +181,6 @@ export default observer(function SettingsScreen() {
           />
           )}
       </View>
-
-      {__DEV__ && (
-        <View style={{ marginTop: 16, paddingVertical: 8, borderTopWidth: 1, borderTopColor: "#e5e7eb" }}>
-          <Text style={{ fontSize: 16, fontWeight: "700", marginBottom: 8 }}>Debug</Text>
-          <Button
-            label="Export Diagnostics (DEV)"
-            onPress={() => router.push("/(debug)/export-diagnostics")}
-          />
-        </View>
-      )}
     </ScrollView>
     </SafeAreaView>
   );

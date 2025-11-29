@@ -264,10 +264,35 @@ function PhotoEditorImpl() {
     }
   }, [baseUri, SCREEN_W, defaultH]);
 
-  // Create draft entry if not in edit mode (new edit)
+  // Create or update draft entry
   useEffect(() => {
-    if (!sourceUri || editId || params.mode === "edit") return; // Skip if already has editId or in edit mode
+    if (!sourceUri) return;
 
+    // If we have an editId, update the existing draft
+    if (editId) {
+      history.updateDraft(editId, {
+        sourceUri: String(sourceUri),
+        effect: look,
+        tintHex: look === "tint" ? tint : undefined,
+        strength: strength,
+      });
+      return;
+    }
+
+    // If we're resuming from history (has editId in params), use that
+    if (params.editId) {
+      setEditId(params.editId);
+      // Update the existing draft with current settings
+      history.updateDraft(params.editId, {
+        sourceUri: String(sourceUri),
+        effect: look,
+        tintHex: look === "tint" ? tint : undefined,
+        strength: strength,
+      });
+      return;
+    }
+
+    // Create a new draft entry for new edits
     const entry = history.addDraft({
       sourceUri: String(sourceUri),
       effect: look,
@@ -276,7 +301,7 @@ function PhotoEditorImpl() {
     });
 
     setEditId(entry.id);
-  }, [sourceUri, editId, params.mode, history, look, tint, strength]);
+  }, [sourceUri, editId, params.editId, history, look, tint, strength]);
 
 
 
@@ -316,6 +341,12 @@ function PhotoEditorImpl() {
         console.log("[EXPORT]", fileUri);
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         console.log("[EXPORT_OK]", asset.id);
+        
+        // Mark as exported in history if there's an editId
+        if (editId) {
+          history.markExported(editId, asset.uri);
+        }
+        
         Alert.alert("Saved", "Exported to gallery.");
         return;
       }
@@ -333,6 +364,12 @@ function PhotoEditorImpl() {
         console.log("[EXPORT]", fileUri);
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         console.log("[EXPORT_OK]", asset.id);
+        
+        // Mark as exported in history if there's an editId
+        if (editId) {
+          history.markExported(editId, asset.uri);
+        }
+        
         Alert.alert("Saved", "Exported to gallery.");
         return;
       }
@@ -354,6 +391,12 @@ function PhotoEditorImpl() {
         console.log("[EXPORT]", fileUri);
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         console.log("[EXPORT_OK]", asset.id);
+        
+        // Mark as exported in history if there's an editId
+        if (editId) {
+          history.markExported(editId, asset.uri);
+        }
+        
         Alert.alert("Saved", "Exported to gallery.");
         return;
       }
@@ -364,6 +407,12 @@ function PhotoEditorImpl() {
       console.log("[EXPORT]", fileUri);
       const asset = await MediaLibrary.createAssetAsync(fileUri);
       console.log("[EXPORT_OK]", asset.id);
+      
+      // Mark as exported in history if there's an editId
+      if (editId) {
+        history.markExported(editId, asset.uri);
+      }
+      
       Alert.alert("Saved", "Exported to gallery.");
     } catch (e) {
       console.warn("[EXPORT_ERR]", e);
@@ -371,7 +420,7 @@ function PhotoEditorImpl() {
     } finally {
       setExporting(false);
     }
-  }, [baseUri, look, savedLook, waitEditorReady, viewShotRef]);
+  }, [baseUri, look, savedLook, waitEditorReady, viewShotRef, editId, history]);
 
 
   // Auto-export if requested (only once on mount)

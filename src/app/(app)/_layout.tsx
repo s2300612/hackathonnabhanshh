@@ -22,8 +22,8 @@ function ProtectedTabs() {
   // If not signed in, redirect to login
   if (!authStore.signedIn) {
     return <Redirect href="/login" />;
-  }
-
+    }
+  
   return (
     <Tabs
       initialRouteName="camera-advanced"
@@ -36,7 +36,7 @@ function ProtectedTabs() {
           paddingTop: 6,
         },
         tabBarItemStyle: { paddingVertical: 4 },
-      }}
+        }}
     >
       <Tabs.Screen
         name="album"

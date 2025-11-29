@@ -1,8 +1,7 @@
 import { makeAutoObservable } from "mobx";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import { makePersistable } from "mobx-persist-store";
+import { safeStorage } from "@/lib/safe-storage";
 
 
 
@@ -52,7 +51,7 @@ export class CameraStore {
 
       properties: ["look", "tint", "night", "thermal", "tintAlpha", "recent"],
 
-      storage: AsyncStorage,
+      storage: safeStorage,
 
       stringify: true,
 
