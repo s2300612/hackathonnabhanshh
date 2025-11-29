@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, FlatList, Image, Pressable, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as MediaLibrary from "expo-media-library";
 import * as ImagePicker from "expo-image-picker";
 import { observer } from "mobx-react-lite";
@@ -17,6 +18,9 @@ type ShotItem = {
   bakedUri?: string;
   local?: boolean;
   originalUri?: string;
+  look?: "none" | "night" | "thermal" | "tint";
+  tint?: string;
+  alpha?: number;
 };
 const LONG_PRESS_HINT_KEY = "album.longpress.hint.v1";
 
@@ -164,6 +168,9 @@ function AlbumScreenImpl() {
         bakedUri: item.bakedUri ?? item.uri,
         originalUri: item.uri,
         local: true,
+        look: item.look,
+        tint: item.tint,
+        alpha: item.alpha,
       });
     });
 
@@ -183,24 +190,40 @@ function AlbumScreenImpl() {
   }, [items, camera.recent]);
 
   const openViewer = (shot: ShotItem) => {
+    const base = shot.bakedUri ?? shot.uri;
     if (shot.local) {
       router.push({ pathname: "/(app)/viewer", params: { id: String(shot.id) } });
     } else {
-      router.push({ pathname: "/(app)/viewer", params: { uri: shot.uri } });
+      router.push({ pathname: "/(app)/viewer", params: { uri: base } });
     }
   };
 
   const openEditor = (shot: ShotItem) => {
+    const base = shot.bakedUri ?? shot.uri;
+    // Use saved effect from shot as base layer
+    const savedEffect = shot.look || "none";
+    const savedTint = shot.tint || "#22c55e";
+    const savedStrength = shot.alpha !== undefined ? shot.alpha : 0.35;
+    
     router.push({
       pathname: "/(app)/photo",
       params: {
-        sourceUri: shot.originalUri ?? shot.uri,
+        sourceUri: base,
+        // Current effect starts as "none" so user can layer on top
+        effect: "none",
+        tintHex: "#22c55e",
+        strength: "0.35",
+        // Saved effect as base layer (always shown)
+        savedEffect: savedEffect,
+        savedTint: savedTint,
+        savedStrength: String(savedStrength),
+        editId: shot.local ? String(shot.id) : "",
       },
     });
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       <View style={{ flex: 1, padding: 12 }}>
         <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 8 }}>Album</Text>
 
@@ -217,7 +240,7 @@ function AlbumScreenImpl() {
             }}
           >
             <Text style={{ color: "#92400e", fontWeight: "700" }}>Tip</Text>
-            <Text style={{ color: "#92400e", marginTop: 4 }}>Press & hold a local tile to delete it.</Text>
+            <Text style={{ color: "#92400e", marginTop: 4 }}>Long-press a photo to open the editor.</Text>
             <Text style={{ color: "#92400e", marginTop: 8, fontSize: 12 }}>Tap to dismiss</Text>
           </Pressable>
         )}
@@ -295,7 +318,7 @@ function AlbumScreenImpl() {
                       {
                         text: "Delete",
                         style: "destructive",
-                        onPress: async () => {
+                        onPress: () => {
                           camera.removeShot(item.id);
                         },
                       },
@@ -322,7 +345,7 @@ function AlbumScreenImpl() {
           }
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

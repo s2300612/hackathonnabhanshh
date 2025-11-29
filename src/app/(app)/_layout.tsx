@@ -3,10 +3,13 @@ import React from "react";
 import { Tabs, Redirect } from "expo-router";
 import { observer } from "mobx-react-lite";
 import { View, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authStore } from "@/stores/auth-store";
 import { Ionicons } from "@expo/vector-icons";
 
 function ProtectedTabs() {
+  const insets = useSafeAreaInsets();
+
   // Wait for hydration before checking auth status
   if (!authStore.hydrated) {
     return (
@@ -22,7 +25,19 @@ function ProtectedTabs() {
   }
 
   return (
-    <Tabs initialRouteName="camera-advanced" screenOptions={{ headerShown: true, tabBarHideOnKeyboard: true }}>
+    <Tabs
+      initialRouteName="camera-advanced"
+      screenOptions={{
+        headerShown: false,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          height: 64 + insets.bottom,
+          paddingBottom: Math.max(10, insets.bottom),
+          paddingTop: 6,
+        },
+        tabBarItemStyle: { paddingVertical: 4 },
+      }}
+    >
       <Tabs.Screen
         name="album"
         options={{
@@ -60,7 +75,6 @@ function ProtectedTabs() {
       />
       {/* Hide any dev/stub routes */}
       <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="style" options={{ href: null }} />
       <Tabs.Screen name="camera-settings" options={{ href: null }} />
       <Tabs.Screen name="process" options={{ href: null }} />
       <Tabs.Screen name="photo" options={{ href: null }} />

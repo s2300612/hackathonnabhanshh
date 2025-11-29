@@ -9,6 +9,7 @@ import FlashMessage from "react-native-flash-message";
 import { StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { StoresProvider } from "@/stores";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // --- simple contexts you had ---
 const ThemeContext = createContext({ dark: false });
@@ -52,13 +53,15 @@ function Gate({ children }: { children: React.ReactNode }) {
 // ---- SINGLE default export (keep just this one) ----
 export default function RootLayout() {
   return (
-    <StoresProvider>
-      <Providers>
-        <Gate>
-          <Slot />
-        </Gate>
-      </Providers>
-    </StoresProvider>
+    <SafeAreaProvider>
+      <StoresProvider>
+        <Providers>
+          <Gate>
+            <Slot />
+          </Gate>
+        </Providers>
+      </StoresProvider>
+    </SafeAreaProvider>
   );
 }
 

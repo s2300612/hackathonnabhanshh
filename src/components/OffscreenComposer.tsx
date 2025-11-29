@@ -1,68 +1,90 @@
 import React from "react";
 import { View, Image, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { hexToRgba, Hex } from "@/lib/tint";
 
-export type Look = "none" | "night" | "thermal" | "tint";
+type Look = "none" | "night" | "thermal" | "tint";
 
 type Props = {
   uri: string;
   look: Look;
-  tintHex: string;
-  alpha: number;
+  tintHex?: Hex;
+  alpha?: number; // 0..1
   width: number;
   height: number;
+  onReady?: () => void;
 };
 
-export default function OffscreenComposer({ uri, look, tintHex, alpha, width, height }: Props) {
-  const overlay = (() => {
-    if (look === "night") {
-      return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,60,${alpha || 0.35})` }]} />;
-    }
+export default function OffscreenComposer({ uri, look, tintHex, alpha, width, height, onReady }: Props) {
+  const computedAlpha =
+    look === "tint" || look === "night" || look === "thermal" ? alpha ?? 0 : 0;
 
-    if (look === "thermal") {
-      const value = alpha || 0.35;
-      return (
-        <LinearGradient
-          pointerEvents="none"
-          colors={[`rgba(255,0,0,${value})`, `rgba(255,140,0,${value})`]}
-          style={StyleSheet.absoluteFill}
-        />
-      );
-    }
+  console.log("[OffscreenComposer] Rendering with:", { uri: uri?.substring(0, 50), look, tintHex, alpha, computedAlpha, width, height });
 
-    if (look === "tint") {
-      return (
-        <View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: tintHex,
-              opacity: alpha || 0.35,
-            },
-          ]}
-        />
-      );
-    }
+  const tintOverlayStyle =
+    look === "tint" && computedAlpha > 0 && tintHex
+      ? { backgroundColor: hexToRgba(tintHex, computedAlpha) }
+      : null;
 
-    return null;
-  })();
+  const nightOverlayStyle =
+    look === "night" && computedAlpha > 0
+      ? { backgroundColor: `rgba(0,60,0,${computedAlpha})` }
+      : null;
+
+  const thermalOpacity = look === "thermal" && computedAlpha > 0 ? computedAlpha : 0;
+  
+  console.log("[OffscreenComposer] Overlay styles:", { 
+    hasTint: !!tintOverlayStyle, 
+    hasNight: !!nightOverlayStyle, 
+    thermalOpacity 
+  });
 
   return (
-    <View style={[styles.root, { width, height }]}>
-      {!!uri && (
-        <Image source={{ uri }} style={{ width, height, resizeMode: "contain" }} />
+    <View
+      key={uri}
+      style={{ width: "100%", height: "100%", backgroundColor: "#000" }}
+      collapsable={false}
+      pointerEvents="none"
+    >
+      {uri ? (
+        <Image
+          key={uri}
+          source={{ uri }}
+          style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+          onLoad={() => {
+            // Wait for overlays to render before calling onReady
+            // Use requestAnimationFrame to ensure overlays are painted
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                // Additional small delay to ensure overlays are fully rendered
+                setTimeout(() => {
+                  onReady?.();
+                }, 100);
+              });
+            });
+          }}
+          onError={(e) => {
+            console.warn("[OffscreenComposer] Image load error:", e, "URI:", uri);
+            onReady?.();
+          }}
+        />
+      ) : null}
+
+      {tintOverlayStyle && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, tintOverlayStyle]} />
       )}
-      {overlay}
+
+      {nightOverlayStyle && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, nightOverlayStyle]} />
+      )}
+
+      {thermalOpacity > 0 && (
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(0,0,0,0)", "rgba(255,0,0,1)", "rgba(255,255,0,1)"]}
+          style={[StyleSheet.absoluteFill, { opacity: thermalOpacity }]}
+        />
+      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    backgroundColor: "black",
-    overflow: "hidden",
-  },
-});
-
-

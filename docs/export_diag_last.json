@@ -1,0 +1,55 @@
+{
+  "runAt": "UNKNOWN (synthetic run from assistant, not device)",
+  "device": {
+    "os": "unknown",
+    "osVersion": "unknown",
+    "appVersion": "unknown",
+    "expoConfig": {
+      "sdkVersion": "unknown",
+      "name": "Camera+"
+    }
+  },
+  "permissionInitial": {
+    "note": "Real permission snapshot not captured. Run diagnostics on-device to populate."
+  },
+  "permissionAddOnly": {
+    "note": "Real addOnly/write-only permission not captured. Run diagnostics on-device to populate."
+  },
+  "dummyWrite": {
+    "note": "Dummy 1x1 PNG write/createAssetAsync has not been executed in this synthetic run."
+  },
+  "albumReadCalls": {
+    "getAlbumAsyncCalled": false,
+    "addAssetsToAlbumAsyncCalled": false,
+    "note": "Export path does not call album read APIs by design; Album screen does for gallery view."
+  },
+  "items": [
+    {
+      "id": "perm-initial",
+      "label": "Initial MediaLibrary permissions",
+      "status": "WARN",
+      "detail": "Synthetic report – run diagnostics on device for actual permission state."
+    },
+    {
+      "id": "perm-addonly",
+      "label": "Request addOnly / write-only permission",
+      "status": "WARN",
+      "detail": "Synthetic report – real result depends on user granting Photos/Media permission."
+    },
+    {
+      "id": "dummy-asset",
+      "label": "Create dummy 1x1 PNG asset",
+      "status": "WARN",
+      "detail": "Not executed in this synthetic run. Use the Export Diagnostics screen to test."
+    },
+    {
+      "id": "album-read",
+      "label": "Album read APIs called during diagnostics",
+      "status": "PASS",
+      "detail": "Export flow does not invoke getAlbumAsync/addAssetsToAlbumAsync; only Album screen does."
+    }
+  ],
+  "recommendation": "Run the in-app Export Diagnostics screen in a DEV build to capture real device permissions and dummy asset behavior, then regenerate this report with `node scripts/write-export-report.mjs`."
+}
+
+

@@ -77,19 +77,33 @@ export class CameraStore {
   pushLocal(payload: { uri: string; bakedUri?: string; look?: Look; tint?: string; alpha?: number; createdAt?: number }) {
     const { uri, bakedUri, look, tint, alpha, createdAt } = payload;
     if (!uri) return null;
-    const exists = this.recent.some(s => s.uri === uri && (!bakedUri || s.bakedUri === bakedUri));
+    
+    // Don't store data URIs in AsyncStorage - they're too large
+    // Data URIs will be passed via params instead
+    const isDataUri = bakedUri?.startsWith('data:');
+    const storedBakedUri = isDataUri ? undefined : bakedUri;
+    
+    const exists = this.recent.some(s => s.uri === uri && (!storedBakedUri || s.bakedUri === storedBakedUri));
     if (exists) return null;
     const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const shot: Shot = {
       id,
       uri,
-      bakedUri,
+      bakedUri: storedBakedUri || undefined, // only store file URIs, not data URIs
       look,
       tint,
       alpha,
       createdAt: createdAt ?? Date.now(),
     };
-    this.recent = [shot, ...this.recent].slice(0, 100);
+    // Limit to 50 items to prevent AsyncStorage "Row too big" errors
+    this.recent = [shot, ...this.recent].slice(0, 50);
+    
+    // If bakedUri is a data URI, return it in the shot but it won't be persisted
+    // The caller should pass it via params instead
+    if (isDataUri && bakedUri) {
+      return { ...shot, bakedUri };
+    }
+    
     return shot;
   }
 

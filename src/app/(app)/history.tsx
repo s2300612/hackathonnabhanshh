@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { View, Text, FlatList, Image, Alert, Pressable, StyleSheet, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 import { observer } from "mobx-react-lite";
 import { useStores } from "@/stores";
@@ -74,7 +75,7 @@ function HistoryScreenImpl() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
       <Stack.Screen options={{ title: "History" }} />
       
       {/* Filter Chips */}
@@ -206,7 +207,7 @@ function HistoryScreenImpl() {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
