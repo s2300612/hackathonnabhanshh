@@ -47,25 +47,25 @@ yarn start
 
 Module	            Responsibility
 
-src/app/_layout.tsx	Root layout with providers (MobX stores, SafeArea, StatusBar).
-src/app/login.tsx	Login screen (email/password).
-src/app/register.tsx	Registration screen for new accounts.
-src/app/(app)/_layout.tsx	Protected tab layout (Album, Camera+, History, Settings, Details).
-src/app/(app)/album.tsx	Album grid; merges device album and local recent captures.
-src/app/(app)/camera-advanced.tsx	Main camera preview and capture workflow with live effects.
-src/app/(app)/photo.tsx	Photo editor screen (baked preview and export).
-src/app/(app)/history.tsx	Edit history screen with filter/sort and pagination.
-src/app/(app)/settings.tsx	Settings screen (camera defaults + account section).
-src/app/(app)/details.tsx	App information screen (version, description).
-src/stores/auth-store.tsx	MobX store for authentication and user/session persistence.
-src/stores/camera-store.ts	MobX store for camera preferences and recent captures.
-src/stores/history-store.ts	MobX store for edit history (draft/exported entries).
-src/stores/index.tsx	Store provider/entry point for MobX stores.
-src/lib/camera-permissions.ts	Camera and media‑library permission helpers.
-src/lib/tint.ts	Tint helpers and swatch definitions.
-src/lib/date.ts	Date/time formatting helpers for history and details.
-src/lib/fs.ts	File‑system utilities (delete local images, etc.).
-src/lib/safe-storage.ts	AsyncStorage wrapper that suppresses “Row too big” errors.
+- src/app/_layout.tsx	Root layout with providers (MobX stores, SafeArea, StatusBar).
+- src/app/login.tsx	Login screen (email/password).
+- src/app/register.tsx	Registration screen for new accounts.
+- src/app/(app)/_layout.tsx	Protected tab layout (Album, Camera+, History, Settings, Details).
+- src/app/(app)/album.tsx	Album grid; merges device album and local recent captures.
+- src/app/(app)/camera-advanced.tsx	Main camera preview and capture workflow with live effects.
+- src/app/(app)/photo.tsx	Photo editor screen (baked preview and export).
+- src/app/(app)/history.tsx	Edit history screen with filter/sort and pagination.
+- src/app/(app)/settings.tsx	Settings screen (camera defaults + account section).
+- src/app/(app)/details.tsx	App information screen (version, description).
+- src/stores/auth-store.tsx	MobX store for authentication and user/session persistence.
+- src/stores/camera-store.ts	MobX store for camera preferences and recent captures.
+- src/stores/history-store.ts	MobX store for edit history (draft/exported entries).
+- src/stores/index.tsx	Store provider/entry point for MobX stores.
+- src/lib/camera-permissions.ts	Camera and media‑library permission helpers.
+- src/lib/tint.ts	Tint helpers and swatch definitions.
+- src/lib/date.ts	Date/time formatting helpers for history and details.
+- src/lib/fs.ts	File‑system utilities (delete local images, etc.).
+- src/lib/safe-storage.ts	AsyncStorage wrapper that suppresses “Row too big” errors.
 
 ## Camera+ Features
 
