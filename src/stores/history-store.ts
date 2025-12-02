@@ -75,7 +75,6 @@ export class HistoryStore {
       updatedAt: now,
     };
 
-    // Always create a new entry - don't de-dupe (user might want multiple edits of the same image)
     this.recentEdits = [entry, ...this.recentEdits].slice(0, cap);
     return entry;
   }

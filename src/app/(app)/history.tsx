@@ -72,7 +72,6 @@ function HistoryScreenImpl() {
   };
 
   const handleExport = (item: typeof data[0]) => {
-    // Navigate to editor in export mode - user can export from there
     router.push({
       pathname: "/(app)/photo",
       params: {

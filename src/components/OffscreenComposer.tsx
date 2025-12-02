@@ -52,11 +52,8 @@ export default function OffscreenComposer({ uri, look, tintHex, alpha, width, he
           source={{ uri }}
           style={{ width: "100%", height: "100%", resizeMode: "cover" }}
           onLoad={() => {
-            // Wait for overlays to render before calling onReady
-            // Use requestAnimationFrame to ensure overlays are painted
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
-                // Additional small delay to ensure overlays are fully rendered
                 setTimeout(() => {
                   onReady?.();
                 }, 100);

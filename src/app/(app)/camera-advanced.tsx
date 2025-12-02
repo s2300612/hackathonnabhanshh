@@ -78,13 +78,11 @@ function CameraAdvancedImpl() {
       // Bake the current look immediately using the offscreen composer
       readyRef.current = false;
       const start = Date.now();
-      // wait briefly for OffscreenComposer onReady (with overlays rendered)
       while (!readyRef.current && Date.now() - start < 3000) {
         // eslint-disable-next-line no-await-in-loop
         await new Promise((r) => setTimeout(r, 50));
       }
       
-      // Additional delay to ensure overlays are fully painted
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       await new Promise(r => setTimeout(r, 200));
 
@@ -101,7 +99,6 @@ function CameraAdvancedImpl() {
         });
         if (captured) {
           console.log("[CAMERA] Captured temp file:", captured);
-          // Add a small delay to ensure the file is fully written
           await new Promise(r => setTimeout(r, 100));
           try {
             bakedUri = await persistTemp(captured);

@@ -10,7 +10,6 @@ import { Ionicons } from "@expo/vector-icons";
 function ProtectedTabs() {
   const insets = useSafeAreaInsets();
 
-  // Wait for hydration before checking auth status
   if (!authStore.hydrated) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>

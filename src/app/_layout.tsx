@@ -40,17 +40,9 @@ function Providers({ children }: { children: React.ReactNode }) {
   );
 }
 
-// --- Auth gate: redirects between public and protected areas ---
-// Note: The (app)/_layout.tsx now handles auth routing, so this Gate is simplified
 function Gate({ children }: { children: React.ReactNode }) {
-  // The (app)/_layout.tsx handles the actual auth checks and redirects
-  // This Gate just passes through for now
   return <>{children}</>;
 }
-
-
-
-// ---- SINGLE default export (keep just this one) ----
 export default function RootLayout() {
   return (
     <SafeAreaProvider>

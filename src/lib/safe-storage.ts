@@ -1,4 +1,3 @@
-// Wrapper around AsyncStorage that suppresses "Row too big" errors
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function isRowTooBigError(error: any): boolean {
@@ -6,17 +5,14 @@ function isRowTooBigError(error: any): boolean {
   return message.includes('Row too big') || message.includes('CursorWindow');
 }
 
-// Create a safe storage wrapper that suppresses "Row too big" errors
 export const safeStorage = {
   getItem: async (key: string): Promise<string | null> => {
     try {
       return await AsyncStorage.getItem(key);
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors - return null to indicate no data
         return null;
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -26,10 +22,8 @@ export const safeStorage = {
       await AsyncStorage.setItem(key, value);
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors - data is too large to store
         return;
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -39,10 +33,8 @@ export const safeStorage = {
       await AsyncStorage.removeItem(key);
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors
         return;
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -52,10 +44,8 @@ export const safeStorage = {
       return await AsyncStorage.multiGet(keys);
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors - return empty results
         return keys.map(key => [key, null]);
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -65,10 +55,8 @@ export const safeStorage = {
       await AsyncStorage.multiSet(entries);
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors - data is too large to store
         return;
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -78,10 +66,8 @@ export const safeStorage = {
       await AsyncStorage.multiRemove(keys);
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors
         return;
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -91,10 +77,8 @@ export const safeStorage = {
       return await AsyncStorage.getAllKeys();
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors - return empty array
         return [];
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -104,10 +88,8 @@ export const safeStorage = {
       await AsyncStorage.clear();
     } catch (error) {
       if (isRowTooBigError(error)) {
-        // Silently suppress "Row too big" errors
         return;
       }
-      // Re-throw other errors
       throw error;
     }
   },

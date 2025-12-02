@@ -118,7 +118,6 @@ function PhotoEditorImpl() {
   const viewShotRef = useRef<ViewShot>(null);
   const [imgReady, setImgReady] = React.useState(false);
   const editorReadyResolve = React.useRef<null | (() => void)>(null);
-  // Ensure dimensions are always valid (minimum screen width and 4:3 aspect ratio)
   const defaultH = Math.round((SCREEN_W * 4) / 3);
   const [imgW, setImgW] = useState<number>(SCREEN_W);
   const [imgH, setImgH] = useState<number>(defaultH);
@@ -219,7 +218,6 @@ function PhotoEditorImpl() {
         return;
       }
       editorReadyResolve.current = resolve;
-      // Hard timeout to prevent infinite waiting
       setTimeout(() => {
         console.warn("[EDITOR] waitEditorReady timeout, proceeding anyway");
         resolve();
@@ -264,11 +262,9 @@ function PhotoEditorImpl() {
     }
   }, [baseUri, SCREEN_W, defaultH]);
 
-  // Create or update draft entry
   useEffect(() => {
     if (!sourceUri) return;
 
-    // If we have an editId, update the existing draft
     if (editId) {
       history.updateDraft(editId, {
         sourceUri: String(sourceUri),
@@ -279,10 +275,8 @@ function PhotoEditorImpl() {
       return;
     }
 
-    // If we're resuming from history (has editId in params), use that
     if (params.editId) {
       setEditId(params.editId);
-      // Update the existing draft with current settings
       history.updateDraft(params.editId, {
         sourceUri: String(sourceUri),
         effect: look,
@@ -292,7 +286,6 @@ function PhotoEditorImpl() {
       return;
     }
 
-    // Create a new draft entry for new edits
     const entry = history.addDraft({
       sourceUri: String(sourceUri),
       effect: look,
@@ -342,7 +335,6 @@ function PhotoEditorImpl() {
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         console.log("[EXPORT_OK]", asset.id);
         
-        // Mark as exported in history if there's an editId
         if (editId) {
           history.markExported(editId, asset.uri);
         }
@@ -351,21 +343,18 @@ function PhotoEditorImpl() {
         return;
       }
 
-      // For edited exports, capture with ViewShot
       await waitEditorReady();
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       await new Promise(r => setTimeout(r, 150));
 
       if (!viewShotRef.current) {
-        // Fall back to base file if capture fails
         const { ensureFileUri } = await import("@/lib/ensureFileUri");
         const fileUri = await ensureFileUri(baseUri);
         console.log("[EXPORT]", fileUri);
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         console.log("[EXPORT_OK]", asset.id);
         
-        // Mark as exported in history if there's an editId
         if (editId) {
           history.markExported(editId, asset.uri);
         }
@@ -385,14 +374,12 @@ function PhotoEditorImpl() {
       });
 
       if (!captured) {
-        // Fall back to base file if capture fails
         const { ensureFileUri } = await import("@/lib/ensureFileUri");
         const fileUri = await ensureFileUri(baseUri);
         console.log("[EXPORT]", fileUri);
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         console.log("[EXPORT_OK]", asset.id);
         
-        // Mark as exported in history if there's an editId
         if (editId) {
           history.markExported(editId, asset.uri);
         }
@@ -401,7 +388,6 @@ function PhotoEditorImpl() {
         return;
       }
 
-      // Ensure captured file is a file:// URI
       const { ensureFileUri } = await import("@/lib/ensureFileUri");
       const fileUri = await ensureFileUri(captured);
       console.log("[EXPORT]", fileUri);
@@ -423,7 +409,6 @@ function PhotoEditorImpl() {
   }, [baseUri, look, savedLook, waitEditorReady, viewShotRef, editId, history]);
 
 
-  // Auto-export if requested (only once on mount)
   const autoExportRef = useRef(false);
   useEffect(() => {
     const baseUri = bakedParam || sourceUri;

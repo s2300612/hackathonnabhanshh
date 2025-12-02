@@ -97,7 +97,6 @@ function AlbumScreenImpl() {
         }))
         .filter(x => !!x.uri);
 
-      // Create draft entry and navigate to editor for first picked image
       if (picked.length > 0) {
         const firstUri = picked[0].uri;
         const draft = history.addDraft({

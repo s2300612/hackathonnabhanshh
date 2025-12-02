@@ -55,7 +55,6 @@ const ViewerScreen = observer(() => {
     router.push({ pathname: '/(app)/photo', params: { sourceUri: base, effect: 'none' }});
   };
 
-  // Viewer routes export through the editor
   const handleExport = () => {
     const base = shot?.bakedUri ?? shot?.uri ?? (typeof params.uri === 'string' ? params.uri : '');
     router.push({ pathname: '/(app)/photo', params: { sourceUri: base, effect: 'none' }});
