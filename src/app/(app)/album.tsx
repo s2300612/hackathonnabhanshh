@@ -11,7 +11,13 @@ import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-
+/*
+- Album screen showing device photos and recent captures
+- When picking from gallery:
+  1. Filters picked images to valid URIs
+  2. Creates draft entry for first picked image
+  3. Navigates to editor with draft entry
+*/
 type ShotItem = {
   id: string;
   uri: string;

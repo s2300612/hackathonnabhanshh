@@ -1,17 +1,31 @@
 import * as FileSystem from 'expo-file-system';
+/*
+- `getWritableDir()`: Determines a writable directory path by:
+  1. Trying `FileSystem.cacheDirectory` or `FileSystem.documentDirectory`
+  2. Falling back to legacy API if new API unavailable
+  3. Using hardcoded Camera directory path as final fallback
+- `ensureCacheDir()`: Creates a `camplus/` subdirectory in the writable directory
+- `persistTemp(uri)`: Moves temporary files to persistent storage:
+  1. Verifies source file exists
+  2. Extracts and cleans filename (handles double-encoding, removes special chars, ensures .jpg extension)
+  3. Copies file to Camera directory with timestamp prefix
+  4. Falls back to base64 read/write if copy fails
+  5. Verifies destination file exists after operation
+- `fileExists(uri)`: Checks if a file exists and has non-zero size
 
+
+*/
 async function getWritableDir(): Promise<string> {
   let root = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
   
   if (!root) {
     try {
       const legacyFS = await import('expo-file-system/legacy');
-      // @ts-expect-error - legacy API may have different structure
       root = legacyFS.cacheDirectory ?? legacyFS.documentDirectory;
     } catch {
     }
   }
-  
+  //
   if (!root) {
     root = '/data/user/0/host.exp.exponent/cache/Camera/';
   }

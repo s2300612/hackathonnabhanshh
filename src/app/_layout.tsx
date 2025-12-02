@@ -10,8 +10,13 @@ import { StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { StoresProvider } from "@/stores";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-
-// --- simple contexts you had ---
+/*
+- Root layout component that sets up app-wide providers
+- `Gate` component: Simple pass-through wrapper (auth routing handled in `(app)/_layout.tsx`)
+- `RootLayout`: Wraps app with providers (SafeAreaProvider, StoresProvider, ThemeProvider, etc.)
+- Provides FlashMessage component for toast notifications
+*/
+// simple contexts i had to add
 const ThemeContext = createContext({ dark: false });
 const APIContext = createContext({});
 
@@ -20,7 +25,7 @@ function APIProvider({ children }: { children: React.ReactNode }) {
 }
 
 function Providers({ children }: { children: React.ReactNode }) {
-  const [isDark] = useState(false); // no setter needed unless you toggle
+  const [isDark] = useState(false); // kinda useless in this case
   const navigationTheme = isDark ? DarkTheme : DefaultTheme;
 
   return (

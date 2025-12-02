@@ -15,7 +15,11 @@ const ViewerScreen = observer(() => {
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
   const imageShotRef = useRef<ViewShot>(null);
-
+/*
+- Full-screen image viewer
+- `handleExport()`: Routes export action through photo editor
+- Opens editor with current image and export parameters
+*/
   const shot = params.id ? camera.recent.find((s) => String(s.id) === String(params.id)) : undefined;
 
   const base = shot?.bakedUri ?? shot?.uri ?? (typeof params.uri === "string" ? params.uri : undefined);

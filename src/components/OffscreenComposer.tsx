@@ -4,7 +4,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { hexToRgba, Hex } from "@/lib/tint";
 
 type Look = "none" | "night" | "thermal" | "tint";
-
+/*
+- Renders an image with effect overlays (tint, night, thermal) off-screen
+- Used by `ViewShot` to capture images with effects "baked in"
+- `onLoad` handler: Waits for image to load, then uses double `requestAnimationFrame` + 100ms timeout before calling `onReady`
+- Ensures overlays are fully rendered before capture
+*/
 type Props = {
   uri: string;
   look: Look;

@@ -10,7 +10,11 @@ import * as MediaLibrary from "expo-media-library";
 import { getMediaPermission, ALBUM } from "@/lib/camera-permissions";
 
 const ITEMS_PER_PAGE = 10;
-
+/*
+- History screen showing edit entries with pagination
+- `handleExport()`: Navigates to photo editor with `autoExport: true` parameter
+- Editor handles the actual export when opened in this mode
+*/
 function HistoryScreenImpl() {
   const router = useRouter();
   const { auth, history, camera } = useStores();

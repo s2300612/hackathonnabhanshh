@@ -4,7 +4,7 @@ function isRowTooBigError(error: any): boolean {
   const message = error?.message || String(error || '');
   return message.includes('Row too big') || message.includes('CursorWindow');
 }
-
+// The safe storage makes it safe by wrapping AsyncStorage to stop any errors from Rows being too big.
 export const safeStorage = {
   getItem: async (key: string): Promise<string | null> => {
     try {
@@ -16,7 +16,7 @@ export const safeStorage = {
       throw error;
     }
   },
-
+// Also makes `setItem()`, `removeItem()`, `multiSet()`, `multiRemove()`, `clear()` fail when rows are too big.
   setItem: async (key: string, value: string): Promise<void> => {
     try {
       await AsyncStorage.setItem(key, value);
@@ -27,7 +27,7 @@ export const safeStorage = {
       throw error;
     }
   },
-
+// prevents app crashes also when the AsyncStorage finds data that exceeds sizes allowed by the database.
   removeItem: async (key: string): Promise<void> => {
     try {
       await AsyncStorage.removeItem(key);

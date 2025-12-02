@@ -158,7 +158,19 @@ function CameraAdvancedImpl() {
       </View>
     );
   }
+/*
+- Camera screen with real-time effect overlays
+- `takePhoto()` function:
+  1. Captures raw photo from camera
+  2. Waits up to 3 seconds for `OffscreenComposer` to be ready
+  3. Uses double `requestAnimationFrame` + 200ms delay to ensure overlays render
+  4. Captures baked image using `ViewShot` with `OffscreenComposer`
+  5. Waits 100ms for file write to complete
+  6. Persists captured image to stable location
+  7. Stores both raw and baked URIs in camera store
+  8. Navigates to viewer with baked image
 
+*/
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
       <StatusBar style="dark" backgroundColor="#fff" />

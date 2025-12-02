@@ -6,7 +6,13 @@ import { View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authStore } from "@/stores/auth-store";
 import { Ionicons } from "@expo/vector-icons";
-
+/*
+- Protected tabs layout that handles authentication
+- Waits for `authStore.hydrated` before checking `authStore.signedIn`
+- Shows loading spinner during hydration
+- Redirects to `/login` if not signed in
+- Renders tab navigator if authenticated
+*/
 function ProtectedTabs() {
   const insets = useSafeAreaInsets();
 

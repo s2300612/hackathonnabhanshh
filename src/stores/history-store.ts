@@ -6,7 +6,12 @@ import { safeStorage } from "@/lib/safe-storage";
 import { v4 as uuid } from "uuid";
 
 export type EffectKind = "none" | "night" | "thermal" | "tint";
-
+/*
+- History store managing edit entries
+- `addDraft()`: Always creates new entry (no de-duplication)
+- Allows users to have multiple edits of the same source image
+- Limits to 100 entries (oldest removed when cap exceeded)
+*/
 export type EditEntry = {
   id: string; // uuid v4
   sourceUri: string;

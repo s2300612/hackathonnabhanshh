@@ -1,5 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+/*
+- Photo editor screen for applying effects to images
+- `defaultH`: Calculates default image height (4:3 aspect ratio based on screen width)
+- `waitEditorReady()`: Waits for editor to be ready with 3-second timeout fallback
+- Draft management `useEffect`:
+  1. If `editId` exists, updates existing draft with current settings
+  2. If `params.editId` exists, sets local `editId` and updates draft
+  3. Otherwise, creates new draft entry
+- `doExport()` function:
+  1. If no effects applied, exports base image directly
+  2. Otherwise, waits for editor ready, captures with `ViewShot`
+  3. Converts captured URI to file URI format
+  4. Saves to gallery using `MediaLibrary.createAssetAsync()`
+  5. Marks history entry as exported if `editId` exists
+  6. Falls back to base image if capture fails
+- Auto-export: Exports automatically on mount if `params.autoExport === "true"`
 
+*/
 import {
   View,
   Text,
