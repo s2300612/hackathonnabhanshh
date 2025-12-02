@@ -34,7 +34,7 @@ npx expo install
 npx expo start
 # or
 yarn start
-
+```
 
 
 ## Architecture
@@ -766,7 +766,7 @@ All routes require authentication. Tab navigation:
 
 ### Navigation Flow
 
-```
+
 Login/Register
     ↓ (success)
 Camera+ (initial tab)
