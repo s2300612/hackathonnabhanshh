@@ -25,12 +25,12 @@ function APIProvider({ children }: { children: React.ReactNode }) {
 }
 
 function Providers({ children }: { children: React.ReactNode }) {
-  const [isDark] = useState(false); // kinda useless in this case
+  const [isDark] = useState(true);
   const navigationTheme = isDark ? DarkTheme : DefaultTheme;
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
         <ThemeContext.Provider value={{ dark: isDark }}>
           <ThemeProvider value={navigationTheme}>
             <APIProvider>

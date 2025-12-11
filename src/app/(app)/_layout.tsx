@@ -1,37 +1,15 @@
 // src/app/(app)/_layout.tsx
 import React from "react";
-import { Tabs, Redirect } from "expo-router";
-import { observer } from "mobx-react-lite";
-import { View, ActivityIndicator } from "react-native";
+import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { authStore } from "@/stores/auth-store";
 import { Ionicons } from "@expo/vector-icons";
-/*
-- Protected tabs layout that handles authentication
-- Waits for `authStore.hydrated` before checking `authStore.signedIn`
-- Shows loading spinner during hydration
-- Redirects to `/login` if not signed in
-- Renders tab navigator if authenticated
-*/
-function ProtectedTabs() {
+
+export default function SirruTabs() {
   const insets = useSafeAreaInsets();
 
-  if (!authStore.hydrated) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  // If not signed in, redirect to login
-  if (!authStore.signedIn) {
-    return <Redirect href="/login" />;
-    }
-  
   return (
     <Tabs
-      initialRouteName="camera-advanced"
+      initialRouteName="home"
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -39,47 +17,48 @@ function ProtectedTabs() {
           height: 64 + insets.bottom,
           paddingBottom: Math.max(10, insets.bottom),
           paddingTop: 6,
+          backgroundColor: "#121212",
+          borderTopColor: "rgba(255,255,255,0.08)",
         },
-        tabBarItemStyle: { paddingVertical: 4 },
-        }}
+        tabBarActiveTintColor: "#00FFE0",
+        tabBarInactiveTintColor: "#A0A0A0",
+      }}
     >
       <Tabs.Screen
-        name="album"
+        name="home"
         options={{
-          title: "Album",
-          tabBarIcon: ({ color, size }) => <Ionicons name="images-outline" color={color} size={size} />,
+          title: "Home",
+          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="camera-advanced"
+        name="koamas"
         options={{
-          title: "Camera+",
-          tabBarIcon: ({ color, size }) => <Ionicons name="camera-outline" color={color} size={size} />,
+          title: "Koamas",
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="faru"
         options={{
-          title: "History",
-          tabBarIcon: ({ color, size }) => <Ionicons name="time-outline" color={color} size={size} />,
+          title: "Faru",
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="breathing"
         options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" color={color} size={size} />,
+          title: "Breathing",
+          tabBarIcon: ({ color, size }) => <Ionicons name="pulse-outline" color={color} size={size} />,
         }}
       />
-      <Tabs.Screen
-        name="details"
-        options={{
-          title: "Details",
-          tabBarIcon: ({ color, size }) => <Ionicons name="information-circle-outline" color={color} size={size} />,
-        }}
-      />
-      {/* Hide any dev/stub routes */}
+      {/* Hide legacy routes */}
       <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="camera-advanced" options={{ href: null }} />
+      <Tabs.Screen name="album" options={{ href: null }} />
+      <Tabs.Screen name="history" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="details" options={{ href: null }} />
       <Tabs.Screen name="camera-settings" options={{ href: null }} />
       <Tabs.Screen name="process" options={{ href: null }} />
       <Tabs.Screen name="photo" options={{ href: null }} />
@@ -87,5 +66,3 @@ function ProtectedTabs() {
     </Tabs>
   );
 }
-
-export default observer(ProtectedTabs);
