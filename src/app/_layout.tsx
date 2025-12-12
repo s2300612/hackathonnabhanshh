@@ -31,16 +31,16 @@ function Providers({ children }: { children: React.ReactNode }) {
   return (
     <GestureHandlerRootView style={styles.container}>
       <StatusBar style="light" />
-        <ThemeContext.Provider value={{ dark: isDark }}>
-          <ThemeProvider value={navigationTheme}>
-            <APIProvider>
-              <BottomSheetModalProvider>
-                {children}
-                <FlashMessage position="top" />
-              </BottomSheetModalProvider>
-            </APIProvider>
-          </ThemeProvider>
-        </ThemeContext.Provider>
+      <ThemeContext.Provider value={{ dark: isDark }}>
+        <ThemeProvider value={navigationTheme}>
+          <APIProvider>
+            <BottomSheetModalProvider>
+              {children}
+              <FlashMessage position="top" />
+            </BottomSheetModalProvider>
+          </APIProvider>
+        </ThemeProvider>
+      </ThemeContext.Provider>
     </GestureHandlerRootView>
   );
 }
@@ -63,5 +63,8 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: "#020617", // dark background to prevent white flash
+  },
 });

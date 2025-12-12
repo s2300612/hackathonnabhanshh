@@ -52,17 +52,13 @@ export default function SirruTabs() {
           tabBarIcon: ({ color, size }) => <Ionicons name="pulse-outline" color={color} size={size} />,
         }}
       />
-      {/* Hide legacy routes */}
-      <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="camera-advanced" options={{ href: null }} />
-      <Tabs.Screen name="album" options={{ href: null }} />
-      <Tabs.Screen name="history" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
-      <Tabs.Screen name="details" options={{ href: null }} />
-      <Tabs.Screen name="camera-settings" options={{ href: null }} />
-      <Tabs.Screen name="process" options={{ href: null }} />
-      <Tabs.Screen name="photo" options={{ href: null }} />
-      <Tabs.Screen name="viewer" options={{ href: null }} />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" color={color} size={size} />,
+        }}
+      />
     </Tabs>
   );
 }

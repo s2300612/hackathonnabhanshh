@@ -1,187 +1,188 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Slider from "@react-native-community/slider";
-import { Button } from "@/components/ui/button";
-import { STORAGE_CAMERA_PREFS } from "@/lib/camera-permissions";
-import { TINT_SWATCHES } from "@/lib/tint";
-import { observer } from "mobx-react-lite";
-import { useAuth } from "@/stores/auth-store";
-import { useRouter } from "expo-router";
-import { useStores } from "@/stores";
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView } from "react-native";
+import { router } from "expo-router";
+import { useUserStore } from "@/stores/user-store";
 
-type Look = "none" | "night" | "thermal" | "tint";
-type Prefs = { defaultLook: Look; defaultTint: string };
+// ⚠️ For a real app, this password and any API keys
+// MUST live on the backend, not in the client bundle.
+// For hackathon / demo this is okay-ish.
+const ADMIN_PASSWORD = "sirru-koamas-admin";
 
-const DEFAULTS: Prefs = { defaultLook: "none", defaultTint: TINT_SWATCHES[0] };
+export default function SettingsScreen() {
+  const profile = useUserStore((s) => s.profile);
+  const koamasConfig = useUserStore((s) => s.koamasConfig);
+  const setNickname = useUserStore((s) => s.setNickname);
+  const clearAll = useUserStore((s) => s.clearAll);
+  const setKoamasConfig = useUserStore((s) => s.setKoamasConfig);
 
-export default observer(function SettingsScreen() {
-  const auth = useAuth();
-  const router = useRouter();
-  const { camera } = useStores();
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
-  const [saving, setSaving] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState(profile?.nickname || "");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [apiBaseUrlDraft, setApiBaseUrlDraft] = useState(koamasConfig.apiBaseUrl);
+  const [modelNameDraft, setModelNameDraft] = useState(koamasConfig.modelName);
 
-  useEffect(() => {
-    (async () => {
-      const raw = await AsyncStorage.getItem(STORAGE_CAMERA_PREFS);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setPrefs({ ...DEFAULTS, ...parsed });
-        // defaults hydrated from settings - apply to camera store
-        if (parsed.defaultLook) camera.setLook(parsed.defaultLook);
-        if (parsed.defaultTint) camera.setTint(parsed.defaultTint);
-        // Camera store values are already persisted via makePersistable, so they should be loaded
-        // But we can sync from AsyncStorage if needed
-        if (parsed.tintAlpha != null) camera.setTintAlpha(parsed.tintAlpha);
-        if (parsed.nightAlpha != null) camera.setNight(parsed.nightAlpha);
-        if (parsed.thermalAlpha != null) camera.setThermal(parsed.thermalAlpha);
-      }
-    })();
-  }, []);
-
-  const save = async (showFeedback = true) => {
-    setSaving(true);
-    // Write to AsyncStorage for compatibility, but camera store is the source of truth
-    await AsyncStorage.setItem(
-      STORAGE_CAMERA_PREFS,
-      JSON.stringify({
-        ...prefs,
-        tintAlpha: camera.tintAlpha,
-        nightAlpha: camera.night,
-        thermalAlpha: camera.thermal,
-      })
-    );
-    setSaving(false);
-    if (showFeedback) {
-      setShowSaved(true);
-      setTimeout(() => setShowSaved(false), 1200);
+  function handleSaveNickname() {
+    const trimmed = nicknameDraft.trim();
+    if (!trimmed) {
+      Alert.alert("Error", "Nickname cannot be empty.");
+      return;
     }
-  };
+    setNickname(trimmed);
+    Alert.alert("Saved", "Your nickname has been updated.");
+  }
 
-  const handleSignOut = async () => {
-    await auth.logout();
-    router.replace("/login");
-  };
+  function handleEraseAll() {
+    Alert.alert(
+      "Erase all data?",
+      "This will reset your nickname, atoll and mood on this device. It will not delete anything from Supabase or other users.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Erase",
+          style: "destructive",
+          onPress: () => {
+            clearAll();
+            setNicknameDraft("");
+            // Navigate to onboarding to replay the intro animation
+            router.replace("/onboarding");
+          },
+        },
+      ]
+    );
+  }
+
+  function handleUnlockAdmin() {
+    if (adminPassword === ADMIN_PASSWORD) {
+      setAdminUnlocked(true);
+      setAdminPassword("");
+    } else {
+      Alert.alert("Access denied", "Wrong password.");
+      setAdminPassword("");
+    }
+  }
+
+  function handleSaveKoamasConfig() {
+    const trimmedUrl = apiBaseUrlDraft.trim();
+    const trimmedModel = modelNameDraft.trim();
+    
+    if (!trimmedUrl || !trimmedModel) {
+      Alert.alert("Error", "Both API URL and model name are required.");
+      return;
+    }
+
+    setKoamasConfig({
+      apiBaseUrl: trimmedUrl,
+      modelName: trimmedModel,
+    });
+
+    // Here you could ALSO call a Supabase function or your own backend
+    // to persist this config server-side for all users.
+    Alert.alert("Saved", "Koamas AI settings updated for this app.");
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: "700" }}>Camera Settings</Text>
+    <ScrollView
+      className="flex-1 bg-[#121212]"
+      contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 40 }}
+    >
+      <Text className="text-white text-2xl font-bold mb-6">Settings</Text>
 
-      <Text style={{ fontWeight: "600" }}>Default Look</Text>
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        {(["none", "night", "thermal", "tint"] as Look[]).map((l) => (
-          <Button
-            key={l}
-            label={l}
-            size="sm"
-            variant={prefs.defaultLook === l ? "default" : "outline"}
-            onPress={() => {
-              setPrefs((p) => ({ ...p, defaultLook: l }));
-              save(true);
-            }}
-            fullWidth={false}
-          />
-        ))}
+      {/* Nickname */}
+      <View className="bg-[#1E1E1E] rounded-2xl p-4 border border-white/10 mb-4">
+        <Text className="text-white text-lg font-semibold mb-3">Nickname</Text>
+        <Text className="text-gray-400 text-sm mb-2">Current nickname</Text>
+        <Text className="text-[#00FFE0] mb-4">
+          {profile?.nickname || "Not set yet"}
+        </Text>
+        <Text className="text-gray-400 text-sm mb-2">Change nickname</Text>
+        <TextInput
+          value={nicknameDraft}
+          onChangeText={setNicknameDraft}
+          placeholder="Type a new nickname"
+          placeholderTextColor="#6b7280"
+          className="bg-[#121212] text-white rounded-xl px-4 py-3 border border-white/10 mb-4"
+          style={{ color: "#ffffff" }}
+        />
+        <TouchableOpacity
+          onPress={handleSaveNickname}
+          className="bg-[#00FFE0] rounded-full py-3"
+        >
+          <Text className="text-[#020617] text-center font-bold">Save nickname</Text>
+        </TouchableOpacity>
       </View>
 
-      <Text style={{ fontWeight: "600" }}>Default Tint</Text>
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        {TINT_SWATCHES.map((c) => (
-          <Button
-            key={c}
-            onPress={() => {
-              setPrefs((p) => ({ ...p, defaultTint: c }));
-              save(true);
-            }}
-            size="sm"
-            fullWidth={false}
-          >
-            <View
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 11,
-                backgroundColor: c,
-                borderWidth: 1,
-                borderColor: "#ddd",
-              }}
+      {/* Erase data */}
+      <View className="bg-[#1E1E1E] rounded-2xl p-4 border border-white/10 mb-4">
+        <Text className="text-white text-lg font-semibold mb-3">Data & Privacy</Text>
+        <Text className="text-gray-400 text-sm mb-2">
+          Erase all local data on this device
+        </Text>
+        <Text className="text-gray-500 text-xs mb-4">
+          This will clear your nickname, atoll and mood stored on this phone. It will not delete anything from Supabase or other users.
+        </Text>
+        <TouchableOpacity onPress={handleEraseAll} className="bg-[#EF4444] rounded-full py-3">
+          <Text className="text-white text-center font-bold">Erase all data</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Admin area */}
+      <View className="bg-[#1E1E1E] rounded-2xl p-4 border border-white/10">
+        <Text className="text-white text-lg font-semibold mb-3">Admin Area</Text>
+        {!adminUnlocked ? (
+          <>
+            <Text className="text-gray-500 text-xs mb-3">
+              Admins can edit Koamas AI API settings. Enter the admin password to continue.
+            </Text>
+            <TextInput
+              value={adminPassword}
+              onChangeText={setAdminPassword}
+              secureTextEntry
+              placeholder="Admin password"
+              placeholderTextColor="#6b7280"
+              className="bg-[#121212] text-white rounded-xl px-4 py-3 border border-white/10 mb-4"
+              style={{ color: "#ffffff" }}
             />
-          </Button>
-        ))}
-      </View>
-
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-        <Text style={{ fontWeight: "700" }}>Tint strength: {Math.round(camera.tintAlpha * 100)}%</Text>
-        {showSaved && <Text style={{ color: "#10b981", fontSize: 12 }}>Saved ✓</Text>}
-      </View>
-      <Slider
-        value={camera.tintAlpha}
-        onValueChange={(v) => {
-          camera.setTintAlpha(v); // Update camera store directly
-          save(false); // Auto-save without feedback on drag
-        }}
-        onSlidingComplete={() => {
-          save(true); // Show feedback on release
-        }}
-        minimumValue={0}
-        maximumValue={1}
-        step={0.05}
-      />
-
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-        <Text style={{ fontWeight: "700" }}>Night strength: {Math.round(camera.night * 100)}%</Text>
-        {showSaved && <Text style={{ color: "#10b981", fontSize: 12 }}>Saved ✓</Text>}
-      </View>
-      <Slider
-        value={camera.night}
-        onValueChange={(v) => {
-          camera.setNight(v); // Update camera store directly
-          save(false);
-        }}
-        onSlidingComplete={() => {
-          save(true);
-        }}
-        minimumValue={0}
-        maximumValue={1}
-        step={0.05}
-      />
-
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-        <Text style={{ fontWeight: "700" }}>Thermal strength: {Math.round(camera.thermal * 100)}%</Text>
-        {showSaved && <Text style={{ color: "#10b981", fontSize: 12 }}>Saved ✓</Text>}
-      </View>
-      <Slider
-        value={camera.thermal}
-        onValueChange={(v) => {
-          camera.setThermal(v); // Update camera store directly
-          save(false);
-        }}
-        onSlidingComplete={() => {
-          save(true);
-        }}
-        minimumValue={0}
-        maximumValue={1}
-        step={0.05}
-      />
-
-      <Button label={saving ? "Saving…" : "Save"} onPress={save} disabled={saving} />
-
-      <View style={{ marginTop: 24, paddingVertical: 8, borderTopWidth: 1, borderTopColor: "#e5e7eb" }}>
-        <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>Account</Text>
-        <Text style={{ marginBottom: 8 }}>Signed in: {auth.signedIn ? "Yes" : "No"}</Text>
-        {auth.signedIn && (
-          <Button
-            label="Sign out"
-            onPress={handleSignOut}
-            variant="outline"
-          />
-          )}
+            <TouchableOpacity
+              onPress={handleUnlockAdmin}
+              className="border border-gray-600 rounded-full py-3"
+            >
+              <Text className="text-gray-300 text-center font-semibold">Unlock admin area</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text className="text-gray-500 text-xs mb-4">
+              Koamas AI configuration for this app build.
+            </Text>
+            <Text className="text-gray-400 text-sm mb-2">API Base URL</Text>
+            <TextInput
+              value={apiBaseUrlDraft}
+              onChangeText={setApiBaseUrlDraft}
+              placeholder="https://your-api.example.com/koamas"
+              placeholderTextColor="#6b7280"
+              className="bg-[#121212] text-white rounded-xl px-4 py-3 border border-white/10 mb-4"
+              style={{ color: "#ffffff" }}
+              autoCapitalize="none"
+            />
+            <Text className="text-gray-400 text-sm mb-2">Model name / profile</Text>
+            <TextInput
+              value={modelNameDraft}
+              onChangeText={setModelNameDraft}
+              placeholder="claude-sonnet-4"
+              placeholderTextColor="#6b7280"
+              className="bg-[#121212] text-white rounded-xl px-4 py-3 border border-white/10 mb-4"
+              style={{ color: "#ffffff" }}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={handleSaveKoamasConfig}
+              className="bg-[#00FFE0] rounded-full py-3"
+            >
+              <Text className="text-[#020617] text-center font-bold">Save Koamas settings</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </ScrollView>
-    </SafeAreaView>
   );
-});
+}

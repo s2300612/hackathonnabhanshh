@@ -1,5 +1,5 @@
 import create from "zustand";
-import { v4 as uuidv4 } from "uuid";
+import { makeId } from "@/lib/make-id";
 import { useUserStore } from "./user-store";
 
 export type Mood = "sunny" | "stormy";
@@ -20,10 +20,10 @@ type CheckinState = {
 };
 
 const defaultSeeds: Pulse[] = [
-  { id: uuidv4(), atoll: "K", mood: "stormy", createdAt: new Date().toISOString() },
-  { id: uuidv4(), atoll: "S", mood: "sunny", createdAt: new Date().toISOString() },
-  { id: uuidv4(), atoll: "GA", mood: "stormy", createdAt: new Date().toISOString() },
-  { id: uuidv4(), atoll: "Lh", mood: "sunny", createdAt: new Date().toISOString() },
+  { id: makeId(), atoll: "K", mood: "stormy", createdAt: new Date().toISOString() },
+  { id: makeId(), atoll: "S", mood: "sunny", createdAt: new Date().toISOString() },
+  { id: makeId(), atoll: "GA", mood: "stormy", createdAt: new Date().toISOString() },
+  { id: makeId(), atoll: "Lh", mood: "sunny", createdAt: new Date().toISOString() },
 ];
 
 export const useCheckinStore = create<CheckinState>((set, get) => ({
@@ -32,14 +32,14 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
     const user = useUserStore.getState().profile;
     if (!user) return;
     const now = new Date().toISOString();
-    const pulse: Pulse = {
-      id: uuidv4(),
-      atoll: user.atoll,
-      mood,
-      createdAt: now,
-      note,
-      mine: true,
-    };
+      const pulse: Pulse = {
+        id: makeId(),
+        atoll: user.atoll,
+        mood,
+        createdAt: now,
+        note,
+        mine: true,
+      };
     set((state) => ({
       pulses: [pulse, ...state.pulses].slice(0, 200),
     }));

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity } from "react-native";
-import { v4 as uuidv4 } from "uuid";
+import { makeId } from "@/lib/make-id";
 import { useUserStore } from "@/stores/user-store";
 
 type ChatMessage = { id: string; sender: string; text: string };
@@ -23,7 +23,7 @@ function pickCreature(seed: string) {
 
 export default function FaruScreen() {
   const profile = useUserStore((s) => s.profile);
-  const creature = useMemo(() => pickCreature(profile?.deviceId ?? uuidv4()), [profile]);
+  const creature = useMemo(() => pickCreature(profile?.deviceId ?? makeId()), [profile]);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: "hi", sender: "Koamas", text: "Hey everyone. Safe space, no names, no judgment. What's your storm tonight?" },
   ]);
@@ -40,7 +40,7 @@ export default function FaruScreen() {
     if (!trimmed) return;
     setMessages((prev) => [
       ...prev,
-      { id: uuidv4(), sender: `${creature.emoji} ${creature.name}`, text: trimmed },
+      { id: makeId(), sender: `${creature.emoji} ${creature.name}`, text: trimmed },
     ]);
     setInput("");
   };

@@ -28,7 +28,7 @@ function RegisterImpl() {
   const handleRegister = async () => {
     try {
       await auth.register(email, password);
-      router.replace("/(app)/camera-advanced");
+      router.replace("/(app)/home");
     } catch (e) {
       // Error is set in authStore.error
     }

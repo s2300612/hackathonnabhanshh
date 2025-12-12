@@ -28,7 +28,7 @@ function LoginImpl() {
   const handleLogin = async () => {
     try {
       await auth.login(email, password);
-      router.replace("/(app)/camera-advanced");
+      router.replace("/(app)/home");
     } catch (e) {
       // Error is set in authStore.error
     }
@@ -43,7 +43,7 @@ function LoginImpl() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={{ fontSize: 28, fontWeight: "700", marginBottom: 8 }}>Sign in</Text>
-          <Text style={{ color: "#666", marginBottom: 24 }}>Access your camera tools and album.</Text>
+          <Text style={{ color: "#666", marginBottom: 24 }}>Sign in to access Sirru.</Text>
 
           <TextInput
             placeholder="Email"
