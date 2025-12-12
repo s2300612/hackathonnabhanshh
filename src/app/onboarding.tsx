@@ -1,261 +1,321 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import { View, Text, TextInput, TouchableOpacity, Animated, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  FlatList,
+  Pressable,
+} from "react-native";
 import { router } from "expo-router";
-import { useUserStore } from "@/stores/user-store";
-import { useCheckinStore } from "@/stores/checkin-store";
 
-const atolls = [
-  { code: "HA", name: "Haa Alif" },
-  { code: "HDh", name: "Haa Dhaalu" },
-  { code: "Sh", name: "Shaviyani" },
-  { code: "N", name: "Noonu" },
-  { code: "R", name: "Raa" },
-  { code: "B", name: "Baa" },
-  { code: "Lh", name: "Lhaviyani" },
-  { code: "K", name: "Kaafu (Malé)" },
-  { code: "AA", name: "Alif Alif" },
-  { code: "ADh", name: "Alif Dhaalu" },
-  { code: "V", name: "Vaavu" },
-  { code: "M", name: "Meemu" },
-  { code: "F", name: "Faafu" },
-  { code: "Dh", name: "Dhaalu" },
-  { code: "Th", name: "Thaa" },
-  { code: "L", name: "Laamu" },
-  { code: "GA", name: "Gaafu Alif" },
-  { code: "GDh", name: "Gaafu Dhaalu" },
-  { code: "Gn", name: "Gnaviyani (Fuvahmulah)" },
-  { code: "S", name: "Seenu (Addu)" },
+const ATOLLS = [
+  "Haa Alif (HA)",
+  "Haa Dhaalu (HDh)",
+  "Shaviyani (Sh)",
+  "Noonu (N)",
+  "Raa (R)",
+  "Baa (B)",
+  "Lhaviyani (Lh)",
+  "Kaafu (K)",
+  "Alif Alif (AA)",
+  "Alif Dhaalu (ADh)",
+  "Vaavu (V)",
+  "Meemu (M)",
+  "Faafu (F)",
+  "Dhaalu (Dh)",
+  "Thaa (Th)",
+  "Laamu (L)",
+  "Gaafu Alif (GA)",
+  "Gaafu Dhaalu (GDh)",
+  "Gnaviyani (Gn)",
+  "Seenu / Addu (S)",
+  "Malé (Capital)",
 ];
 
-export default function BeginningScreen() {
-  const setProfile = useUserStore((s) => s.setProfile);
-  const addCheckin = useCheckinStore((s) => s.addCheckin);
-  const [showForm, setShowForm] = useState(false);
+type Step = 1 | 2 | 3;
 
-  // Animation refs
-  const bgAnim = useRef(new Animated.Value(0)).current; // 0 = white, 1 = teal, 2 = dark
-  const seaLevel = useRef(new Animated.Value(0)).current; // 0 -> 1 height
-  const bismillahOpacity = useRef(new Animated.Value(0)).current;
-  const bismillahTranslateY = useRef(new Animated.Value(0)).current;
+export default function OnboardingScreen() {
+  const [step, setStep] = useState<Step>(1);
 
-  // Form state
   const [nickname, setNickname] = useState("");
-  const [atoll, setAtoll] = useState("");
-  const [mood, setMood] = useState<"sunny" | "stormy" | null>(null);
-  const [showAtollPicker, setShowAtollPicker] = useState(false);
+  const [atoll, setAtoll] = useState<string | null>(null);
+  const [mood, setMood] = useState<"Sunny" | "Stormy" | null>(null);
 
-  const canContinue = useMemo(() => nickname.trim().length > 1 && atoll.length > 0 && mood !== null, [nickname, atoll, mood]);
+  const [atollModalOpen, setAtollModalOpen] = useState(false);
 
-  useEffect(() => {
-    Animated.sequence([
-      // Phase 1: Fade in Bismillah + transition to teal
-      Animated.parallel([
-        Animated.timing(bgAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: false,
-        }),
-        Animated.timing(bismillahOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
-      // Phase 2: Sea rises + background darkens + Bismillah fades out and moves up
-      Animated.parallel([
-        Animated.timing(seaLevel, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(bgAnim, {
-          toValue: 2,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(bismillahOpacity, {
-          toValue: 0,
-          delay: 1000,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bismillahTranslateY, {
-          toValue: -50,
-          delay: 1000,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start(() => setShowForm(true));
-  }, []);
+  const canContinue = useMemo(() => {
+    return nickname.trim().length > 0 && !!atoll && mood !== null;
+  }, [nickname, atoll, mood]);
 
-  const bgColor = bgAnim.interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: ["#ffffff", "#008B8B", "#020617"], // white → teal → almost black
-  });
+  function nextFromNickname() {
+    if (nickname.trim().length === 0) return;
+    setStep(2);
+  }
 
-  const seaHeight = seaLevel.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0%", "100%"],
-  });
+  function nextFromAtoll() {
+    if (!atoll) return;
+    setStep(3);
+  }
 
   function handleContinue() {
     if (!canContinue) return;
-    setProfile(nickname.trim(), atoll);
-    if (mood) {
-      addCheckin(mood);
-    }
     router.replace("/onboarding-done");
   }
 
-  const selectedAtoll = atolls.find((a) => a.code === atoll);
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-      className="flex-1"
-    >
-      <Animated.View style={{ flex: 1, backgroundColor: bgColor }}>
-        {/* Rising sea layer */}
-        <Animated.View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: seaHeight,
-            backgroundColor: "#008B8B",
-          }}
-        />
+    <View style={styles.container}>
+      <Text style={styles.title}>Sirru – Onboarding</Text>
 
-        {/* Centered Bismillah during intro */}
-        <Animated.View
-          style={{
-            position: "absolute",
-            top: "40%",
-            left: 0,
-            right: 0,
-            alignItems: "center",
-            opacity: bismillahOpacity,
-            transform: [{ translateY: bismillahTranslateY }],
-          }}
-        >
-          <Text style={{ color: "white", fontSize: 24, fontWeight: "500" }}>
-            بسم الله الرحمن الرحيم
-          </Text>
-        </Animated.View>
+      {/* Step 1: Nickname */}
+      {step >= 1 && (
+        <View style={styles.block}>
+          <Text style={styles.label}>Nickname</Text>
+          <TextInput
+            value={nickname}
+            onChangeText={(t) => setNickname(t)}
+            placeholder="Choose a nickname"
+            placeholderTextColor="#6b7280"
+            style={styles.input}
+            returnKeyType="done"
+            onSubmitEditing={nextFromNickname}
+          />
 
-        {/* Form appears after animation */}
-        {showForm && (
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: "center" }}
-            keyboardShouldPersistTaps="handled"
+          {step === 1 && (
+            <TouchableOpacity
+              onPress={nextFromNickname}
+              style={[
+                styles.secondaryBtn,
+                nickname.trim().length === 0 && { opacity: 0.4 },
+              ]}
+              disabled={nickname.trim().length === 0}
+            >
+              <Text style={styles.secondaryText}>Next</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Step 2: Atoll Picker */}
+      {step >= 2 && (
+        <View style={styles.block}>
+          <Text style={styles.label}>Atoll</Text>
+
+          <Pressable
+            onPress={() => setAtollModalOpen(true)}
+            style={styles.pickerButton}
           >
-            <View className="mb-6">
-              <Text className="text-white text-3xl font-bold text-center mb-2">Sirru</Text>
-              <Text className="text-gray-400 text-center">No names. No judgment. Just you.</Text>
-            </View>
+            <Text style={[styles.pickerText, !atoll && { color: "#6b7280" }]}>
+              {atoll ?? "Select your atoll"}
+            </Text>
+          </Pressable>
 
-            {/* Nickname Input */}
-            <View className="mb-4">
-              <Text className="text-white text-base font-semibold mb-2">Pick a nickname</Text>
-              <TextInput
-                placeholder="Anything you like"
-                placeholderTextColor="#6b7280"
-                value={nickname}
-                onChangeText={setNickname}
-                className="bg-white/10 text-white rounded-2xl px-4 py-3 border border-white/20"
-                style={{ color: "#ffffff" }}
-              />
-            </View>
+          {step === 2 && (
+            <TouchableOpacity
+              onPress={nextFromAtoll}
+              style={[styles.secondaryBtn, !atoll && { opacity: 0.4 }]}
+              disabled={!atoll}
+            >
+              <Text style={styles.secondaryText}>Next</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
-            {/* Atoll Selector */}
-            <View className="mb-4">
-              <Text className="text-white text-base font-semibold mb-2">Which atoll are you in?</Text>
+      {/* Step 3: Mood */}
+      {step >= 3 && (
+        <View style={styles.block}>
+          <Text style={styles.label}>How is your weather?</Text>
+          <View style={styles.row}>
+            {["Sunny", "Stormy"].map((m) => (
               <TouchableOpacity
-                onPress={() => setShowAtollPicker(!showAtollPicker)}
-                className={`bg-white/10 rounded-2xl px-4 py-3 border ${
-                  atoll ? "border-white/20" : "border-white/10"
-                }`}
+                key={m}
+                onPress={() => setMood(m as "Sunny" | "Stormy")}
+                style={[styles.moodButton, mood === m && styles.moodButtonActive]}
               >
-                <Text className="text-white" style={{ color: atoll ? "#ffffff" : "#6b7280" }}>
-                  {selectedAtoll ? selectedAtoll.name : "Select your atoll"}
+                <Text
+                  style={[styles.moodText, mood === m && styles.moodTextActive]}
+                >
+                  {m}
                 </Text>
               </TouchableOpacity>
+            ))}
+          </View>
 
-              {showAtollPicker && (
-                <View className="mt-2 max-h-64 bg-white/5 rounded-2xl border border-white/10 p-2">
-                  <ScrollView nestedScrollEnabled>
-                    {atolls.map((item) => (
-                      <TouchableOpacity
-                        key={item.code}
-                        onPress={() => {
-                          setAtoll(item.code);
-                          setShowAtollPicker(false);
-                        }}
-                        className={`py-3 px-3 rounded-xl mb-1 ${
-                          atoll === item.code
-                            ? "bg-[#00FFE0]/20 border border-[#00FFE0]"
-                            : "bg-transparent"
-                        }`}
-                      >
-                        <Text className="text-white font-semibold">{item.name}</Text>
-                        <Text className="text-gray-400 text-xs">{item.code}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
+          <TouchableOpacity
+            style={[styles.continueBtn, !canContinue && { opacity: 0.35 }]}
+            disabled={!canContinue}
+            onPress={handleContinue}
+          >
+            <Text style={styles.continueText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-            {/* Mood Selection */}
-            <View className="mb-6">
-              <Text className="text-white text-base font-semibold mb-2">How is your weather?</Text>
-              <View className="flex-row gap-3">
-                {(["sunny", "stormy"] as const).map((m) => (
-                  <TouchableOpacity
-                    key={m}
-                    onPress={() => setMood(m)}
-                    className={`flex-1 rounded-full py-3 px-4 border ${
-                      mood === m
-                        ? m === "sunny"
-                          ? "bg-[#FFD93D] border-[#FFD93D]"
-                          : "bg-[#6366F1] border-[#6366F1]"
-                        : "bg-white/10 border-white/20"
-                    }`}
-                  >
-                    <Text
-                      className={`text-center font-semibold ${
-                        mood === m ? "text-[#020617]" : "text-white"
-                      }`}
-                    >
-                      {m === "sunny" ? "☀️ Sunny" : "⛈️ Stormy"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+      {/* Modal: scrollable atoll list */}
+      <Modal
+        visible={atollModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAtollModalOpen(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setAtollModalOpen(false)}
+        />
 
-            {/* Continue Button */}
-            <TouchableOpacity
-              onPress={handleContinue}
-              disabled={!canContinue}
-              className={`rounded-full py-3 ${
-                canContinue ? "bg-[#00FFE0]" : "bg-gray-700"
-              }`}
-            >
-              <Text className="text-[#020617] text-center font-bold text-base">
-                Enter Sirru
-              </Text>
-            </TouchableOpacity>
+        <View style={styles.modalSheet}>
+          <Text style={styles.modalTitle}>Select your atoll</Text>
 
-            <Text className="text-gray-500 text-xs text-center mt-4">
-              Anonymous by design. We only store nickname + atoll on device.
-            </Text>
-          </ScrollView>
-        )}
-      </Animated.View>
-    </KeyboardAvoidingView>
+          <FlatList
+            data={ATOLLS}
+            keyExtractor={(item) => item}
+            style={{ maxHeight: 420 }}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => {
+                  setAtoll(item);
+                  setAtollModalOpen(false);
+                }}
+                style={styles.modalItem}
+              >
+                <Text style={styles.modalItemText}>{item}</Text>
+              </Pressable>
+            )}
+          />
+
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => setAtollModalOpen(false)}
+          >
+            <Text style={styles.secondaryText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#020617",
+    paddingHorizontal: 20,
+    paddingTop: 80,
+  },
+  title: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 24,
+  },
+  block: {
+    marginBottom: 18,
+  },
+  label: {
+    color: "#e5e7eb",
+    marginBottom: 6,
+    marginTop: 8,
+    fontSize: 15,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#374151",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: "white",
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderColor: "#374151",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+  },
+  pickerText: {
+    color: "white",
+    fontSize: 16,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  moodButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#4b5563",
+    borderRadius: 999,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  moodButtonActive: {
+    backgroundColor: "#22c55e",
+    borderColor: "#22c55e",
+  },
+  moodText: {
+    color: "white",
+    fontSize: 16,
+  },
+  moodTextActive: {
+    color: "#020617",
+    fontWeight: "700",
+  },
+  continueBtn: {
+    backgroundColor: "#38bdf8",
+    borderRadius: 999,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  continueText: {
+    color: "#020617",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+  secondaryBtn: {
+    marginTop: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#6b7280",
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  secondaryText: {
+    color: "#e5e7eb",
+    fontWeight: "600",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  modalSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#0f172a",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: 16,
+    paddingBottom: 24,
+  },
+  modalTitle: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  modalItem: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1f2937",
+  },
+  modalItemText: {
+    color: "#e5e7eb",
+    fontSize: 15,
+  },
+});
