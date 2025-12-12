@@ -5,18 +5,15 @@ import BoxBreathingCore from "@/features/breathing/BoxBreathingCore";
 export default function BreathingScreen() {
   const [start, setStart] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [currentCycle, setCurrentCycle] = useState(0);
 
   const handleStart = () => {
     setStart(true);
     setIsComplete(false);
-    setCurrentCycle(0);
   };
 
   const handleReset = () => {
     setStart(false);
     setIsComplete(false);
-    setCurrentCycle(0);
     // Trigger re-render to restart
     setTimeout(() => setStart(true), 50);
   };
@@ -24,10 +21,6 @@ export default function BreathingScreen() {
   const handleComplete = () => {
     setIsComplete(true);
     setStart(false);
-  };
-
-  const handlePhaseChange = (_phase: string, cycle: number) => {
-    setCurrentCycle(cycle);
   };
 
   return (
@@ -39,15 +32,9 @@ export default function BreathingScreen() {
       <BoxBreathingCore 
         start={start} 
         onComplete={handleComplete} 
-        onPhaseChange={handlePhaseChange}
         size={224} 
         color="#00FFE0" 
       />
-      {start && !isComplete && (
-        <Text className="text-gray-300 mt-6">
-          Cycle {Math.min(4, currentCycle + 1)} / 4
-        </Text>
-      )}
       {isComplete && (
         <Text className="text-gray-300 mt-6 text-center">Well done! 🌟</Text>
       )}

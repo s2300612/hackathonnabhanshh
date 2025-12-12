@@ -1,17 +1,10 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useMemo, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, Animated, Easing } from "react-native";
-import MapView, { Marker, UrlTile, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import { Pulse } from "@/stores/checkin-store";
+import MaldivesMapSVG from "../../assets/maldives-map.svg";
 
 type Props = {
   pulses?: Pulse[];
-};
-
-const MALDIVES_REGION: Region = {
-  latitude: 3.2,
-  longitude: 73.2,
-  latitudeDelta: 6.0,
-  longitudeDelta: 6.0,
 };
 
 function GlowDot({ mood }: { mood: "sunny" | "stormy" }) {
@@ -56,46 +49,24 @@ export default function PulseMap({ pulses }: Props) {
   }, [pulses]);
 
   return (
-    <View className="bg-[#1E1E1E] rounded-3xl p-4 border border-white/10">
+    <View className="bg-[#0b1220] rounded-3xl p-4 border border-white/10">
       <Text className="text-white text-lg font-semibold mb-2">Pulse Map</Text>
       <Text className="text-gray-400 text-sm mb-3">
-        Real-time emotional weather across Maldives (last 24h).
+        Last 24h check-ins across Maldives.
       </Text>
       <View style={styles.card}>
-        <MapView
-          style={styles.map}
-          provider={PROVIDER_DEFAULT}
-          initialRegion={MALDIVES_REGION}
-          mapType="none"
-          rotateEnabled={false}
-          pitchEnabled={false}
-          scrollEnabled={true}
-          zoomEnabled={true}
-        >
-          {/* OpenStreetMap tiles */}
-          <UrlTile
-            urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maximumZ={19}
-            flipY={false}
-          />
-
-          {recent.map((p) => (
-            <Marker
-              key={p.id}
-              coordinate={{ latitude: p.lat, longitude: p.lng }}
-              anchor={{ x: 0.5, y: 0.5 }}
-              tracksViewChanges={false}
-            >
-              <GlowDot mood={p.mood} />
-            </Marker>
-          ))}
-        </MapView>
+        <View style={styles.mapContainer}>
+          <MaldivesMapSVG width="100%" height="100%" />
+        </View>
         {recent.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No check-ins yet. Be the first to add a pulse.</Text>
           </View>
         )}
       </View>
+      <Text className="text-gray-500 text-xs mt-2 text-center">
+        © OpenStreetMap contributors · Tiles © Carto
+      </Text>
     </View>
   );
 }
@@ -108,10 +79,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.08)",
     backgroundColor: "rgba(255,255,255,0.03)",
     height: 320,
+    position: "relative",
   },
-  map: {
+  mapContainer: {
     width: "100%",
-    height: 320,
+    height: "100%",
+    backgroundColor: "#000000",
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyState: {
     position: "absolute",

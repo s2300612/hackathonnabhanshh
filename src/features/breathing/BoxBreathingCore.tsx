@@ -6,7 +6,6 @@ type Props = {
   onComplete?: () => void;
   size?: number;
   color?: string;
-  onPhaseChange?: (phase: string, cycle: number) => void;
 };
 
 const phases = ["Inhale", "Hold", "Exhale", "Hold"] as const;
@@ -16,7 +15,6 @@ export default function BoxBreathingCore({
   onComplete,
   size = 80,
   color = "#22c55e",
-  onPhaseChange,
 }: Props) {
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [cycle, setCycle] = useState(0);
@@ -48,22 +46,17 @@ export default function BoxBreathingCore({
                   clearInterval(intervalRef.current);
                   intervalRef.current = null;
                 }
-                onComplete?.();
+                // Call onComplete in next tick to avoid setState during render
+                setTimeout(() => onComplete?.(), 0);
                 return c; // Keep at 4
               }
-              onPhaseChange?.(phases[0], newCycle);
               return newCycle;
             });
-          } else {
-            onPhaseChange?.(phases[next], cycle);
           }
           
           return next;
         });
       }, 4000);
-      
-      // Initial phase change
-      onPhaseChange?.(phases[0], 0);
     } else {
       // Stop interval when not started
       if (intervalRef.current) {

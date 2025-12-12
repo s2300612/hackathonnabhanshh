@@ -10,6 +10,7 @@ import {
   Pressable,
 } from "react-native";
 import { router } from "expo-router";
+import { useUserStore } from "@/stores/user-store";
 
 const ATOLLS = [
   "Haa Alif (HA)",
@@ -45,6 +46,7 @@ export default function OnboardingScreen() {
   const [mood, setMood] = useState<"Sunny" | "Stormy" | null>(null);
 
   const [atollModalOpen, setAtollModalOpen] = useState(false);
+  const setProfile = useUserStore((s) => s.setProfile);
 
   const canContinue = useMemo(() => {
     return nickname.trim().length > 0 && !!atoll && mood !== null;
@@ -62,6 +64,8 @@ export default function OnboardingScreen() {
 
   function handleContinue() {
     if (!canContinue) return;
+    // Persist the profile so the name sticks immediately
+    setProfile(nickname.trim(), atoll!);
     router.replace("/onboarding-done");
   }
 

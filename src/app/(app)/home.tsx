@@ -24,30 +24,29 @@ export default function HomeScreen() {
           onPress={() => (profile ? setShowCheckin(true) : router.replace("/onboarding"))}
           className="mt-4 bg-[#00FFE0] rounded-full py-3"
         >
-          <Text className="text-black text-center font-semibold">
-            {profile ? "Check In" : "Finish onboarding"}
-          </Text>
+          <Text className="text-black text-center font-semibold">Check In</Text>
         </TouchableOpacity>
         <View className="mt-6">
           <AavaChart />
         </View>
         <View className="mt-6 rounded-3xl p-4 bg-[#1E1E1E] border border-white/10">
-          <Text className="text-white text-lg font-semibold mb-2">Need support right now?</Text>
-          <View className="flex-row gap-3">
-            <TouchableOpacity
-              onPress={() => router.push("/(app)/koamas")}
-              className="flex-1 bg-[#2A2A2A] rounded-2xl p-3 border border-white/10"
-            >
-              <Text className="text-white font-semibold">🫂 Talk to Koamas</Text>
-              <Text className="text-gray-400 text-sm">Culturally-aware AI friend</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push("/(app)/breathing")}
-              className="flex-1 bg-[#2A2A2A] rounded-2xl p-3 border border-white/10"
-            >
-              <Text className="text-white font-semibold">🌬️ Breathing</Text>
-              <Text className="text-gray-400 text-sm">1-minute box breathing</Text>
-            </TouchableOpacity>
+          <Text className="text-white text-lg font-semibold mb-3">Need support right now?</Text>
+          <View className="space-y-3">
+            <View className="bg-[#2A2A2A] rounded-2xl p-3 border border-white/10">
+              <Text className="text-white font-semibold">📞 Primary Crisis Hotline</Text>
+              <Text className="text-gray-300 text-base mt-1">1425</Text>
+              <Text className="text-gray-400 text-sm">24/7</Text>
+            </View>
+            <View className="bg-[#2A2A2A] rounded-2xl p-3 border border-white/10">
+              <Text className="text-white font-semibold">📞 Mental Health Helpline (Thibaa)</Text>
+              <Text className="text-gray-300 text-base mt-1">722 1212</Text>
+              <Text className="text-gray-400 text-sm">9 AM – 10 PM, daily</Text>
+            </View>
+            <View className="bg-[#2A2A2A] rounded-2xl p-3 border border-white/10">
+              <Text className="text-white font-semibold">🚨 Emergency Line</Text>
+              <Text className="text-gray-300 text-base mt-1">119</Text>
+              <Text className="text-gray-400 text-sm">24/7</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
