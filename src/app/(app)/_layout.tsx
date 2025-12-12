@@ -59,6 +59,8 @@ export default function SirruTabs() {
           tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" color={color} size={size} />,
         }}
       />
+      {/* Hide index route from tab bar */}
+      <Tabs.Screen name="index" options={{ href: null }} />
     </Tabs>
   );
 }
